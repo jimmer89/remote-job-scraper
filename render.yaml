@@ -1,0 +1,20 @@
+# Render.com deployment config
+services:
+  - type: web
+    name: remote-job-scraper-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+    healthCheckPath: /
+    plan: free
+
+  # Optional: Cron job for scraping
+  - type: cron
+    name: job-scraper-cron
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    schedule: "0 */6 * * *"  # Every 6 hours
+    startCommand: python src/main.py scrape

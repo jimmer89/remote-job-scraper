@@ -25,17 +25,19 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.scrapers import RemoteOKScraper, WeWorkRemotelyScraper, IndeedScraper, RedditScraper
+from src.scrapers import RemoteOKScraper, WeWorkRemotelyScraper, IndeedScraper, RedditScraper, JobSpyScraper, WellfoundScraper
 from src.database import JobDatabase
 
 console = Console()
 
-# Available scrapers
+# Available scrapers (ordered by reliability)
 SCRAPERS = {
     'remoteok': RemoteOKScraper,
     'weworkremotely': WeWorkRemotelyScraper,
-    'indeed': IndeedScraper,
     'reddit': RedditScraper,
+    'jobspy': JobSpyScraper,  # Indeed, ZipRecruiter, Glassdoor
+    'wellfound': WellfoundScraper,  # AngelList/startup jobs
+    # 'indeed': IndeedScraper,  # Deprecated, use jobspy instead
 }
 
 
