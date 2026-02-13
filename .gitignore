@@ -11,6 +11,7 @@ env/
 # Database
 data/*.db
 data/*.db-journal
+!data/jobs_seed.db
 
 # Exports (keep directory)
 data/export*.json

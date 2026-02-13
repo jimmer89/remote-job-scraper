@@ -32,7 +32,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import shutil
+
+# Use seed database if main db doesn't exist
 DB_PATH = "data/jobs.db"
+SEED_DB = "data/jobs_seed.db"
+
+# Copy seed if jobs.db doesn't exist or is empty
+if not Path(DB_PATH).exists() or Path(DB_PATH).stat().st_size < 1000:
+    if Path(SEED_DB).exists():
+        shutil.copy(SEED_DB, DB_PATH)
+        print(f"Copied seed database to {DB_PATH}")
 
 
 def get_db():
