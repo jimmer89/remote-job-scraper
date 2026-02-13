@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""
+REST API for Remote Job Scraper.
+
+Run with: uvicorn src.api:app --reload --port 8000
+"""
+
+from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
+from contextlib import contextmanager
+import json
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.database import JobDatabase
+
+app = FastAPI(
+    title="Remote Job Scraper API",
+    description="API for querying remote job listings from multiple sources",
+    version="1.0.0",
+)
+
+# CORS for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+DB_PATH = "data/jobs.db"
+
+
+def get_db():
+    """Get database connection per request."""
+    db = JobDatabase(DB_PATH)
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@app.get("/")
+def root():
+    """API health check."""
+    return {
+        "status": "ok",
+        "message": "Remote Job Scraper API",
+        "docs": "/docs",
+    }
+
+
+@app.get("/api/jobs")
+def get_jobs(
+    category: Optional[str] = Query(None, description="Filter by category (support, dev, design, etc.)"),
+    source: Optional[str] = Query(None, description="Filter by source (remoteok, weworkremotely, reddit)"),
+    no_phone: bool = Query(False, description="Only jobs that don't require phone"),
+    has_salary: bool = Query(False, description="Only jobs with salary information"),
+    search: Optional[str] = Query(None, description="Search in title, company, description"),
+    limit: int = Query(50, ge=1, le=200, description="Number of results"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    db: JobDatabase = Depends(get_db),
+):
+    """
+    Get job listings with optional filters.
+    
+    Categories: support, dev, design, marketing, sales, writing, va, data-entry, hr, moderation, other
+    Sources: remoteok, weworkremotely, indeed, reddit
+    """
+    if search:
+        jobs = db.search_jobs(search, limit=limit)
+    else:
+        jobs = db.get_jobs(
+            category=category,
+            source=source,
+            no_phone_only=no_phone,
+            has_salary=has_salary,
+            limit=limit,
+            offset=offset,
+        )
+    
+    # Parse tags JSON
+    for job in jobs:
+        if job.get('tags') and isinstance(job['tags'], str):
+            try:
+                job['tags'] = json.loads(job['tags'])
+            except:
+                job['tags'] = []
+    
+    return {
+        "count": len(jobs),
+        "offset": offset,
+        "jobs": jobs,
+    }
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: str, db: JobDatabase = Depends(get_db)):
+    """Get a single job by ID."""
+    jobs = db.get_jobs(limit=1000)
+    
+    for job in jobs:
+        if job['id'] == job_id:
+            if job.get('tags') and isinstance(job['tags'], str):
+                try:
+                    job['tags'] = json.loads(job['tags'])
+                except:
+                    job['tags'] = []
+            return job
+    
+    raise HTTPException(status_code=404, detail="Job not found")
+
+
+@app.get("/api/categories")
+def get_categories(db: JobDatabase = Depends(get_db)):
+    """Get list of job categories with counts."""
+    stats = db.get_stats()
+    return {
+        "categories": [
+            {"name": cat, "count": count}
+            for cat, count in stats['by_category'].items()
+        ]
+    }
+
+
+@app.get("/api/sources")
+def get_sources(db: JobDatabase = Depends(get_db)):
+    """Get list of job sources with counts and last scrape time."""
+    stats = db.get_stats()
+    return {
+        "sources": [
+            {
+                "name": source,
+                "count": stats['by_source'].get(source, 0),
+                "last_scrape": stats['last_scrape'].get(source),
+            }
+            for source in stats['by_source'].keys()
+        ]
+    }
+
+
+@app.get("/api/stats")
+def get_stats(db: JobDatabase = Depends(get_db)):
+    """Get overall statistics."""
+    stats = db.get_stats()
+    return {
+        "total_jobs": stats['total_jobs'],
+        "no_phone_jobs": stats['no_phone_jobs'],
+        "jobs_with_salary": stats['with_salary'],
+        "by_source": stats['by_source'],
+        "by_category": stats['by_category'],
+        "last_scrape": stats['last_scrape'],
+    }
+
+
+@app.get("/api/lazy-girl-jobs")
+def get_lazy_girl_jobs(
+    limit: int = Query(50, ge=1, le=200),
+    db: JobDatabase = Depends(get_db),
+):
+    """
+    Get 'Lazy Girl Jobs' - remote jobs that don't require phone calls.
+    
+    Focuses on: customer support, data entry, content moderation, VA roles.
+    """
+    # Get no-phone jobs in specific categories
+    lazy_categories = ['support', 'data-entry', 'moderation', 'va', 'writing']
+    
+    all_jobs = []
+    seen_ids = set()
+    
+    for category in lazy_categories:
+        jobs = db.get_jobs(
+            category=category,
+            no_phone_only=True,
+            limit=limit,
+        )
+        for job in jobs:
+            if job['id'] not in seen_ids:
+                all_jobs.append(job)
+                seen_ids.add(job['id'])
+    
+    # Also get no-phone jobs from other categories
+    other_jobs = db.get_jobs(no_phone_only=True, limit=limit)
+    for job in other_jobs:
+        if job['id'] not in seen_ids:
+            all_jobs.append(job)
+            seen_ids.add(job['id'])
+    
+    # Sort by scraped_at descending
+    all_jobs.sort(key=lambda x: x.get('scraped_at', ''), reverse=True)
+    
+    # Parse tags
+    for job in all_jobs[:limit]:
+        if job.get('tags') and isinstance(job['tags'], str):
+            try:
+                job['tags'] = json.loads(job['tags'])
+            except:
+                job['tags'] = []
+    
+    return {
+        "count": len(all_jobs[:limit]),
+        "jobs": all_jobs[:limit],
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

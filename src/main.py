@@ -25,7 +25,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.scrapers import RemoteOKScraper, WeWorkRemotelyScraper
+from src.scrapers import RemoteOKScraper, WeWorkRemotelyScraper, IndeedScraper, RedditScraper
 from src.database import JobDatabase
 
 console = Console()
@@ -34,6 +34,8 @@ console = Console()
 SCRAPERS = {
     'remoteok': RemoteOKScraper,
     'weworkremotely': WeWorkRemotelyScraper,
+    'indeed': IndeedScraper,
+    'reddit': RedditScraper,
 }
 
 

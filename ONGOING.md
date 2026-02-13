@@ -6,85 +6,100 @@ Este archivo trackea el estado actual del proyecto y las decisiones tomadas.
 
 ## 🎯 Estado Actual
 
-**Fase**: 1 - MVP Scraper  
+**Fase**: 1 - MVP Scraper ✅ COMPLETADO  
 **Última sesión**: 2026-02-13  
-**Próximo paso**: Mejorar parsing de WeWorkRemotely, añadir más fuentes
+**Próximo paso**: Mejorar detección de "no-phone", añadir más fuentes, frontend
 
 ---
 
 ## 📅 Log de Sesiones
 
-### 2026-02-13 - Sesión Inicial ✅
+### 2026-02-13 - Sesión 2 ✅
 
-**Contexto**: 
-- Jaume vio un video de TikTok sobre "Remote Job Finder" (Remote Route)
-- Quiere replicar el concepto pero con valor real
-- Objetivo: crear un agregador de trabajos remotos
+**Completado**:
+- [x] Mejorado scraper WeWorkRemotely (extrae company names correctamente)
+- [x] Añadido scraper de Indeed (anti-scraping detectado, 0 resultados)
+- [x] Añadido scraper de Reddit (r/remotejobs, r/forhire, r/WorkOnline)
+- [x] API REST con FastAPI funcionando
+- [x] Cron job configurado (cada 6 horas)
+
+**Resultados actuales**:
+```
+Total: 513 jobs activos
+- RemoteOK: 98 jobs
+- WeWorkRemotely: 326 jobs  
+- Reddit: 89 jobs
+- Indeed: 0 (blocked)
+
+No-phone detectados: 53
+Con salario: 92
+```
+
+**Endpoints API**:
+- `GET /api/jobs` - Listar con filtros
+- `GET /api/jobs?no_phone=true` - Solo no-phone
+- `GET /api/jobs?category=support` - Por categoría
+- `GET /api/lazy-girl-jobs` - "Lazy Girl Jobs"
+- `GET /api/stats` - Estadísticas
+- `GET /api/categories` - Categorías
+- `GET /api/sources` - Fuentes
+
+**Cron configurado**: `0 */6 * * *` (cada 6h)
+
+---
+
+### 2026-02-13 - Sesión 1 ✅
 
 **Completado**:
 - [x] Creado repo GitHub `remote-job-scraper`
 - [x] Documentado MASTERPLAN.md con arquitectura y fases
-- [x] Creado estructura del proyecto
-- [x] Scraper RemoteOK (API JSON) ✅ Funcionando
-- [x] Scraper WeWorkRemotely ✅ Funcionando (parsing mejorable)
+- [x] Scraper RemoteOK (API JSON) funcionando
+- [x] Scraper WeWorkRemotely funcionando
 - [x] Database SQLite con queries
 - [x] CLI con comandos: scrape, list, search, stats, export
 - [x] Auto-categorización de trabajos
 - [x] Detección básica de "no-phone" jobs
 
-**Primera ejecución**:
-```
-Total: 359 jobs scraped
-- RemoteOK: 98 jobs
-- WeWorkRemotely: 261 jobs
-- No-phone detected: 27
-- With salary info: 45
-```
-
-**Decisiones tomadas**:
-1. Stack: Python + SQLite (simple, portable)
-2. Primera fuente: RemoteOK (tiene API pública JSON)
-3. Segunda fuente: WeWorkRemotely (scraping HTML)
-4. Categorías principales: "Lazy Girl Jobs" (no-phone, support, data entry)
-
-**Issues encontrados**:
-- WeWorkRemotely parsing no extrae bien el nombre de empresa (sale "Unknown")
-- Necesita mejora en el selector HTML
-
 ---
 
 ## 🔜 Próximas Tareas
 
-### Siguiente sesión
-- [ ] Mejorar scraper WeWorkRemotely (company name, mejor parsing)
-- [ ] Añadir más keywords para detectar "no-phone"
-- [ ] Scraper de Indeed
-- [ ] Scraper de r/RemoteJobs (Reddit)
+### Prioridad Alta
+- [ ] Mejorar detección de "no-phone" (más keywords, NLP)
+- [ ] Fix Indeed scraper (proxies o API alternativa)
+- [ ] Añadir más fuentes (FlexJobs, Glassdoor, AngelList)
+
+### Prioridad Media
+- [ ] Frontend/landing page con Next.js
+- [ ] Sistema de alertas por email
+- [ ] Quiz de captación estilo Remote Route
 
 ### Backlog
-- [ ] API REST con FastAPI
-- [ ] Sistema de alertas por email
-- [ ] Frontend/landing page
-- [ ] Cron job para actualizaciones automáticas
+- [ ] Docker para deployment
+- [ ] Deploy API a Railway/Render
+- [ ] Integración con Telegram bot
 
 ---
 
 ## 🐛 Issues Conocidos
 
-1. **WeWorkRemotely company name**: El parser no extrae bien el nombre de la empresa
+1. **Indeed blocked**: Anti-scraping activo, devuelve 0 resultados
+   - Solución: Proxies rotativos o buscar API alternativa
    - Prioridad: Media
-   - Estado: Pendiente
+
+2. **Reddit company extraction**: No siempre extrae bien el nombre
+   - Prioridad: Baja
 
 ---
 
 ## 💡 Ideas Parking Lot
 
 - Usar LLM para categorizar trabajos ambiguos
-- Scraper de salarios de Glassdoor para enriquecer datos
-- Integración con LinkedIn para aplicar automáticamente
 - Score de "legitimidad" de ofertas (detectar scams)
 - Comparador de salarios por rol/ubicación
-- Quiz estilo Remote Route para captar leads
+- RSS feed para suscriptores
+- Newsletter automatizada
+- Afiliados con plataformas de formación
 
 ---
 
@@ -92,12 +107,40 @@ Total: 359 jobs scraped
 
 | Métrica | Valor | Target |
 |---------|-------|--------|
-| Jobs en DB | **359** | 500+ |
-| Fuentes activas | **2** | 3+ |
-| No-phone jobs | **27** | - |
-| Jobs con salario | **45** | - |
-| Uptime scraper | N/A | 7+ días |
+| Jobs en DB | **513** ✅ | 500+ |
+| Fuentes activas | **3** ✅ | 3+ |
+| No-phone jobs | **53** | - |
+| Jobs con salario | **92** | - |
+| API endpoints | **7** | - |
+| Cron activo | **Sí** ✅ | - |
 
 ---
 
-*Actualizado: 2026-02-13 22:25*
+## 🛠️ Quick Reference
+
+```bash
+# Activar entorno
+cd ~/projects/remote-job-scraper
+source venv/bin/activate
+
+# Scrape
+python src/main.py scrape
+
+# CLI queries
+python src/main.py list --category support --no-phone
+python src/main.py search --query "chat"
+python src/main.py stats
+python src/main.py export --format json
+
+# API (puerto 8000)
+uvicorn src.api:app --reload --port 8000
+
+# Endpoints útiles
+curl localhost:8000/api/stats
+curl "localhost:8000/api/jobs?no_phone=true&limit=10"
+curl localhost:8000/api/lazy-girl-jobs
+```
+
+---
+
+*Actualizado: 2026-02-13 22:43*

@@ -13,6 +13,6 @@ rich>=13.0.0
 # Utils
 python-dateutil>=2.8.0
 
-# Future: API
-# fastapi>=0.109.0
-# uvicorn>=0.27.0
+# API
+fastapi>=0.109.0
+uvicorn>=0.27.0
