@@ -1,111 +1,84 @@
-# 📝 ONGOING - Trabajo en Progreso
+# 📋 ONGOING - Remote Job Scraper
 
-## 🎯 Estado Actual
+## ✅ COMPLETED (2026-02-13)
 
-**Fase**: 2 - Producción Ready  
-**Última sesión**: 2026-02-13  
-**Total Jobs**: 669
+### Backend
+- [x] Multi-source scraper (5 fuentes)
+- [x] SQLite database
+- [x] FastAPI REST API
+- [x] No-phone detection
+- [x] Salary parsing
+- [x] Auto-categorization
+- [x] "Lazy Girl Jobs" endpoint
+- [x] Railway deployment
 
----
+### Frontend
+- [x] Next.js setup
+- [x] Quiz interactivo
+- [x] Job cards
+- [x] Filtros
+- [x] Stats bar
+- [x] Vercel deployment
 
-## ✅ Completado Esta Sesión
+### DevOps
+- [x] GitHub repo
+- [x] Railway API deployment
+- [x] Vercel frontend deployment
+- [x] Seed database for cold starts
 
-### 1. Frontend con Next.js ✅
-- Landing page con búsqueda
-- Quiz de captación (5 preguntas)
-- Cards de trabajos con filtros
-- Stats bar con métricas en vivo
-- Responsive design con Tailwind
+## 🌐 LIVE URLs
 
-### 2. Fix Indeed via JobSpy ✅
-- Reemplazado scraper custom por JobSpy library
-- Indeed funcionando: 123 jobs
-- Glassdoor parcial: 33 jobs (rate limited)
-- ZipRecruiter bloqueado (GDPR desde EU)
+- **Frontend:** https://frontend-three-azure-48.vercel.app
+- **API:** https://remote-job-scraper-production-2b9c.up.railway.app
+- **Docs:** https://remote-job-scraper-production-2b9c.up.railway.app/docs
+- **Repo:** https://github.com/jimmer89/remote-job-scraper
 
-### 3. Más Fuentes ✅
-- JobSpy (Indeed + Glassdoor)
-- Wellfound (AngelList) - scraper listo, parsing pendiente
-
-### 4. Deploy Config ✅
-- Dockerfile multi-stage
-- railway.json config
-- render.yaml con cron
-
----
-
-## 📊 Stats Actuales
+## 📊 CURRENT STATS
 
 ```
-Total active jobs: 669
-No-phone jobs: 116
-Jobs with salary: 201
-
-By Source:
-  weworkremotely: 326
-  jobspy_indeed: 123
-  remoteok: 98
-  reddit: 89
-  jobspy_glassdoor: 33
-
-By Category:
-  other: 270
-  dev: 152
-  support: 87
-  sales: 47
-  marketing: 47
-  design: 41
+Total: 669 jobs
+No-phone: 116
+With salary: 201
+Sources: 5 (WWR, RemoteOK, Reddit, Indeed, Glassdoor)
 ```
 
----
+## 🔜 NEXT STEPS (Optional)
 
-## 🛠️ Stack Completo
+### Mejoras de Scraping
+- [ ] Añadir LinkedIn Jobs
+- [ ] Añadir AngelList/Wellfound
+- [ ] Añadir FlexJobs
+- [ ] Mejorar detección no-phone con ML
 
-**Backend:**
-- Python 3.12 + FastAPI
-- SQLite database
-- 5 scrapers activos
-- Cron cada 6 horas
+### Mejoras de Frontend
+- [ ] Guardar favoritos (localStorage)
+- [ ] Aplicar directamente desde la web
+- [ ] Alertas por email de nuevos jobs
+- [ ] Dark mode
 
-**Frontend:**
-- Next.js 16 + TypeScript
-- Tailwind CSS
-- Quiz de captación
-- Responsive
+### Mejoras de API
+- [ ] Rate limiting
+- [ ] API keys para acceso público
+- [ ] Webhook notifications
+- [ ] Job recommendations
 
-**Deploy:**
-- Docker ready
-- Railway/Render configs
-- Health checks
+### DevOps
+- [ ] Railway cron para scraping automático
+- [ ] Monitoring/alerting
+- [ ] Custom domain
 
----
+## 🐛 KNOWN ISSUES
 
-## 🔜 Próximos Pasos
+- Railway filesystem is ephemeral (seed DB solves cold starts)
+- Some job descriptions truncated
+- Reddit scraper depends on PRAW rate limits
 
-- [ ] Deploy API a Railway/Render
-- [ ] Deploy frontend a Vercel
-- [ ] Dominio custom
-- [ ] Newsletter signup
-- [ ] Afiliados/monetización
+## 📝 NOTES
 
----
-
-## 🚀 Quick Start
-
-```bash
-# Backend API
-cd ~/projects/remote-job-scraper
-source venv/bin/activate
-uvicorn src.api:app --port 8000
-
-# Frontend (otra terminal)
-cd frontend
-npm run dev
-
-# Scrape manual
-python src/main.py scrape
-```
+- Scraping cada 6h via cron local (puede moverse a Railway)
+- Seed DB incluida en repo (~1.4MB)
+- API permite CORS desde cualquier origen
 
 ---
 
-*Actualizado: 2026-02-13 22:45*
+Last updated: 2026-02-13 23:20

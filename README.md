@@ -1,97 +1,141 @@
 # 🔍 Remote Job Scraper
 
-Agregador automático de trabajos remotos de múltiples fuentes.
+Encuentra trabajos remotos "lazy girl jobs" - posiciones entry-level, sin teléfono, bien pagadas.
 
-## Features
+## 🌐 Live Demo
 
-- 📡 Scraping de múltiples job boards (RemoteOK, WeWorkRemotely, más...)
-- 🏷️ Categorización automática de trabajos
-- 📞 Filtro especial para "no-phone" jobs
-- 💾 Base de datos SQLite portable
-- 📤 Exportación a JSON/CSV
-- ⏰ Actualizaciones automáticas via cron
+| Servicio | URL |
+|----------|-----|
+| **Frontend** | https://frontend-three-azure-48.vercel.app |
+| **API** | https://remote-job-scraper-production-2b9c.up.railway.app |
+| **API Docs** | https://remote-job-scraper-production-2b9c.up.railway.app/docs |
 
-## Quick Start
+## ✨ Features
 
-```bash
-# Clonar repo
-git clone https://github.com/jaume/remote-job-scraper.git
-cd remote-job-scraper
+- 🔄 **Multi-source scraping**: WeWorkRemotely, RemoteOK, Reddit, Indeed, Glassdoor
+- 📞 **No-phone filter**: Detecta trabajos que no requieren llamadas
+- 💰 **Salary extraction**: Parsea salarios de descripciones
+- 🏷️ **Auto-categorization**: dev, support, sales, marketing, design, etc.
+- 🎯 **Quiz interactivo**: Encuentra tu trabajo ideal
+- ⚡ **API REST**: FastAPI con documentación Swagger
 
-# Crear entorno virtual
-python3 -m venv venv
-source venv/bin/activate
+## 📊 Stats Actuales
 
-# Instalar dependencias
-pip install -r requirements.txt
+```
+Total Jobs: 669
+No-Phone Jobs: 116
+Jobs with Salary: 201
 
-# Correr scraper
-python src/main.py scrape
-
-# Ver trabajos
-python src/main.py list --category support
+By Source:
+- WeWorkRemotely: 326
+- Indeed: 123
+- RemoteOK: 98
+- Reddit: 89
+- Glassdoor: 33
 ```
 
-## Estructura
+## 🛠️ Tech Stack
+
+**Backend:**
+- Python 3.12
+- FastAPI
+- SQLite
+- JobSpy, BeautifulSoup, PRAW
+
+**Frontend:**
+- Next.js 16
+- TypeScript
+- Tailwind CSS
+
+**Deployment:**
+- Railway (API)
+- Vercel (Frontend)
+
+## 🚀 Local Development
+
+### Backend
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run scraper
+python src/main.py scrape
+
+# Start API
+python src/main.py api
+# or
+uvicorn src.api:app --reload
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## 📡 API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Health check |
+| `GET /docs` | Swagger UI |
+| `GET /api/stats` | Database statistics |
+| `GET /api/jobs` | List jobs with filters |
+| `GET /api/jobs/{id}` | Get single job |
+| `GET /api/lazy-girl-jobs` | Pre-filtered ideal jobs |
+
+### Query Parameters
+
+- `limit` - Number of results (default: 50)
+- `offset` - Pagination offset
+- `no_phone` - Filter no-phone jobs (true/false)
+- `category` - Filter by category
+- `has_salary` - Only jobs with salary info
+- `source` - Filter by source
+- `search` - Text search in title/company
+
+## 📁 Project Structure
 
 ```
 remote-job-scraper/
 ├── src/
-│   ├── scrapers/         # Scrapers por fuente
-│   │   ├── base.py       # Clase base
-│   │   ├── remoteok.py   # RemoteOK API
-│   │   └── weworkremotely.py
-│   ├── database.py       # SQLite operations
-│   ├── normalizer.py     # Data cleaning
-│   ├── categorizer.py    # Auto-tagging
-│   └── main.py           # CLI entrypoint
-├── data/                 # SQLite DB
-├── logs/                 # Scraper logs
-├── MASTERPLAN.md         # Roadmap completo
-├── ONGOING.md            # Estado actual
-└── requirements.txt
+│   ├── api.py           # FastAPI application
+│   ├── database.py      # SQLite operations
+│   ├── main.py          # CLI entrypoint
+│   └── scrapers/        # Job scrapers
+│       ├── base.py
+│       ├── remoteok.py
+│       ├── weworkremotely.py
+│       ├── reddit.py
+│       └── jobspy_scraper.py
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   └── lib/
+│   └── package.json
+├── data/
+│   └── jobs_seed.db     # Seed database
+├── requirements.txt
+├── railway.toml
+└── README.md
 ```
 
-## Fuentes
+## 🔄 Cron Jobs
 
-| Fuente | Método | Estado |
-|--------|--------|--------|
-| RemoteOK | API JSON | ✅ Implementado |
-| WeWorkRemotely | HTML Scraping | ✅ Implementado |
-| Indeed | Scraping | 🔜 Planned |
-| Reddit | API | 🔜 Planned |
-
-## Categorías
-
-- **Support**: Customer service, chat support, technical support
-- **Data Entry**: Forms, spreadsheets, transcription
-- **Moderation**: Content moderation, community management
-- **VA**: Virtual assistant, admin tasks
-- **Dev**: Software development
-- **Design**: UI/UX, graphic design
-- **Marketing**: SEO, social media, content
-
-## API (Fase 4)
+El scraper corre automáticamente cada 6 horas via cron local:
 
 ```bash
-# Listar trabajos
-GET /api/jobs?category=support&no_phone=true&limit=50
-
-# Buscar
-GET /api/jobs/search?q=customer+support
-
-# Stats
-GET /api/stats
+0 */6 * * * /path/to/scripts/cron_scrape.sh
 ```
 
-## Contributing
-
-PRs welcome. Ver [MASTERPLAN.md](MASTERPLAN.md) para el roadmap.
-
-## License
+## 📝 License
 
 MIT
 
 ---
 
-*Built with 🦜 by PepLlu & Jaume*
+Built with 🦜 by PepLlu & Jaume
