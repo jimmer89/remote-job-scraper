@@ -1,8 +1,9 @@
 # 💼 Business Plan - Remote Job Scraper
 
-**Nombre tentativo:** LazyJobsHQ / RemoteEasy / ChillJobs
+**Nombre:** ChillJobs ✅
+**Modelo:** Freemium B2C ✅
 **Fecha:** 2026-02-13
-**Versión:** 1.0
+**Versión:** 1.1
 
 ---
 
