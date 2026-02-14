@@ -1,9 +1,8 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
-
-// Simple in-memory user store (replace with DB in production)
-const users: Map<string, { id: string; email: string; password: string; name: string; isPro: boolean; proExpiresAt: Date | null }> = new Map();
+import bcrypt from 'bcryptjs';
+import { getDb } from './db';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -22,13 +21,15 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = users.get(credentials.email);
-        if (user && user.password === credentials.password) {
+        const db = getDb();
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(credentials.email) as any;
+
+        if (user && await bcrypt.compare(credentials.password, user.password_hash)) {
           return {
             id: user.id,
             email: user.email,
             name: user.name,
-            isPro: user.isPro,
+            isPro: user.is_pro === 1,
           };
         }
 
@@ -42,7 +43,6 @@ export const authOptions: NextAuthOptions = {
         token.isPro = (user as any).isPro || false;
         token.userId = user.id;
       }
-      // Handle session update (e.g., after Stripe payment)
       if (trigger === 'update' && session?.isPro !== undefined) {
         token.isPro = session.isPro;
       }
@@ -62,34 +62,39 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'chilljobs-secret-key-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
-// Helper to register new user
+// Register new user with hashed password
 export async function registerUser(email: string, password: string, name: string) {
-  if (users.has(email)) {
+  const db = getDb();
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) {
     throw new Error('User already exists');
   }
-  
-  const id = Math.random().toString(36).substring(7);
-  users.set(email, {
-    id,
-    email,
-    password, // In production, hash this!
-    name,
-    isPro: false,
-    proExpiresAt: null,
-  });
-  
+
+  const id = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  db.prepare(
+    'INSERT INTO users (id, email, password_hash, name, is_pro, created_at) VALUES (?, ?, ?, ?, 0, datetime("now"))'
+  ).run(id, email, passwordHash, name);
+
   return { id, email, name, isPro: false };
 }
 
-// Helper to upgrade user to Pro
+// Upgrade user to Pro
 export function upgradeUserToPro(email: string) {
-  const user = users.get(email);
-  if (user) {
-    user.isPro = true;
-    user.proExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-    users.set(email, user);
-  }
+  const db = getDb();
+  db.prepare(
+    'UPDATE users SET is_pro = 1, pro_expires_at = datetime("now", "+30 days") WHERE email = ?'
+  ).run(email);
+}
+
+// Downgrade user from Pro
+export function downgradeUser(email: string) {
+  const db = getDb();
+  db.prepare(
+    'UPDATE users SET is_pro = 0, pro_expires_at = NULL WHERE email = ?'
+  ).run(email);
 }

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { upgradeUserToPro } from '@/lib/auth';
+import { upgradeUserToPro, downgradeUser } from '@/lib/auth';
+import { getDb } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
-    // Check if Stripe is configured
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
       return NextResponse.json(
         { error: 'Stripe webhook is not configured' },
@@ -30,29 +30,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle the event
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const email = session.customer_email || session.metadata?.email;
-        
+
         if (email) {
-          console.log(`Upgrading user ${email} to Pro`);
           upgradeUserToPro(email);
+
+          // Store Stripe customer ID for future reference
+          if (session.customer) {
+            const db = getDb();
+            db.prepare('UPDATE users SET stripe_customer_id = ? WHERE email = ?')
+              .run(session.customer as string, email);
+          }
         }
         break;
       }
-      
+
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        // Handle subscription cancellation
-        console.log('Subscription cancelled:', subscription.id);
-        // In production, downgrade user here
+        const customerId = subscription.customer as string;
+
+        // Find user by stripe_customer_id and downgrade
+        const db = getDb();
+        const user = db.prepare('SELECT email FROM users WHERE stripe_customer_id = ?').get(customerId) as any;
+        if (user) {
+          downgradeUser(user.email);
+        }
         break;
       }
-      
+
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        break;
     }
 
     return NextResponse.json({ received: true });
