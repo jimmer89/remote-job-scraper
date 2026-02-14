@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { upgradeUserToPro, downgradeUser } from '@/lib/auth';
-import { getDb } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -36,28 +35,14 @@ export async function POST(request: Request) {
         const email = session.customer_email || session.metadata?.email;
 
         if (email) {
-          upgradeUserToPro(email);
-
-          // Store Stripe customer ID for future reference
-          if (session.customer) {
-            const db = getDb();
-            db.prepare('UPDATE users SET stripe_customer_id = ? WHERE email = ?')
-              .run(session.customer as string, email);
-          }
+          await upgradeUserToPro(email, session.customer as string);
         }
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-
-        // Find user by stripe_customer_id and downgrade
-        const db = getDb();
-        const user = db.prepare('SELECT email FROM users WHERE stripe_customer_id = ?').get(customerId) as any;
-        if (user) {
-          downgradeUser(user.email);
-        }
+        await downgradeUser(subscription.customer as string);
         break;
       }
 

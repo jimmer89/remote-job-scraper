@@ -22,6 +22,17 @@ class JobDatabase:
         self.conn.row_factory = sqlite3.Row
         
         self.conn.executescript("""
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                name TEXT NOT NULL,
+                is_pro INTEGER DEFAULT 0,
+                stripe_customer_id TEXT,
+                pro_expires_at TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+
             CREATE TABLE IF NOT EXISTS jobs (
                 id TEXT PRIMARY KEY,
                 source TEXT NOT NULL,

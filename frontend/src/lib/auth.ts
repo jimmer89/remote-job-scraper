@@ -1,8 +1,8 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
-import { getDb } from './db';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://remote-job-scraper-production-2b9c.up.railway.app';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,19 +21,28 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const db = getDb();
-        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(credentials.email) as any;
+        try {
+          const res = await fetch(`${API_URL}/api/users/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
 
-        if (user && await bcrypt.compare(credentials.password, user.password_hash)) {
+          if (!res.ok) return null;
+
+          const user = await res.json();
           return {
             id: user.id,
             email: user.email,
             name: user.name,
-            isPro: user.is_pro === 1,
+            isPro: user.isPro,
           };
+        } catch {
+          return null;
         }
-
-        return null;
       },
     }),
   ],
@@ -65,36 +74,38 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// Register new user with hashed password
+// Register new user via backend API
 export async function registerUser(email: string, password: string, name: string) {
-  const db = getDb();
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-  if (existing) {
-    throw new Error('User already exists');
+  const res = await fetch(`${API_URL}/api/users/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || 'Registration failed');
   }
 
-  const id = crypto.randomUUID();
-  const passwordHash = await bcrypt.hash(password, 12);
-
-  db.prepare(
-    'INSERT INTO users (id, email, password_hash, name, is_pro, created_at) VALUES (?, ?, ?, ?, 0, datetime("now"))'
-  ).run(id, email, passwordHash, name);
-
-  return { id, email, name, isPro: false };
+  return res.json();
 }
 
-// Upgrade user to Pro
-export function upgradeUserToPro(email: string) {
-  const db = getDb();
-  db.prepare(
-    'UPDATE users SET is_pro = 1, pro_expires_at = datetime("now", "+30 days") WHERE email = ?'
-  ).run(email);
+// Upgrade user to Pro via backend API
+export async function upgradeUserToPro(email: string, stripeCustomerId?: string) {
+  const res = await fetch(`${API_URL}/api/users/upgrade`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, stripe_customer_id: stripeCustomerId }),
+  });
+  return res.json();
 }
 
-// Downgrade user from Pro
-export function downgradeUser(email: string) {
-  const db = getDb();
-  db.prepare(
-    'UPDATE users SET is_pro = 0, pro_expires_at = NULL WHERE email = ?'
-  ).run(email);
+// Downgrade user via backend API
+export async function downgradeUser(stripeCustomerId: string) {
+  const res = await fetch(`${API_URL}/api/users/downgrade`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stripe_customer_id: stripeCustomerId }),
+  });
+  return res.json();
 }

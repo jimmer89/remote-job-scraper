@@ -7,9 +7,12 @@ Run with: uvicorn src.api:app --reload --port 8000
 
 from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from typing import Optional
 from contextlib import contextmanager
 import json
+import uuid
+import bcrypt
 from pathlib import Path
 import sys
 
@@ -216,6 +219,90 @@ def get_lazy_girl_jobs(
         "count": len(all_jobs[:limit]),
         "jobs": all_jobs[:limit],
     }
+
+
+# --- User Management Endpoints ---
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class VerifyRequest(BaseModel):
+    email: str
+    password: str
+
+class UpgradeRequest(BaseModel):
+    email: str
+    stripe_customer_id: Optional[str] = None
+
+class DowngradeRequest(BaseModel):
+    stripe_customer_id: str
+
+
+@app.post("/api/users/register")
+def register_user(req: RegisterRequest, db: JobDatabase = Depends(get_db)):
+    """Register a new user."""
+    cursor = db.conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE email = ?", (req.email,))
+    if cursor.fetchone():
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    user_id = str(uuid.uuid4())
+    password_hash = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt(12)).decode()
+
+    cursor.execute(
+        "INSERT INTO users (id, email, password_hash, name) VALUES (?, ?, ?, ?)",
+        (user_id, req.email, password_hash, req.name)
+    )
+    db.conn.commit()
+    return {"id": user_id, "email": req.email, "name": req.name, "isPro": False}
+
+
+@app.post("/api/users/verify")
+def verify_user(req: VerifyRequest, db: JobDatabase = Depends(get_db)):
+    """Verify user credentials. Returns user info if valid."""
+    cursor = db.conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (req.email,))
+    row = cursor.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    user = dict(row)
+    if not bcrypt.checkpw(req.password.encode(), user["password_hash"].encode()):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "name": user["name"],
+        "isPro": bool(user["is_pro"]),
+    }
+
+
+@app.post("/api/users/upgrade")
+def upgrade_user(req: UpgradeRequest, db: JobDatabase = Depends(get_db)):
+    """Upgrade a user to Pro."""
+    cursor = db.conn.cursor()
+    cursor.execute(
+        "UPDATE users SET is_pro = 1, stripe_customer_id = ?, pro_expires_at = datetime('now', '+30 days') WHERE email = ?",
+        (req.stripe_customer_id, req.email)
+    )
+    db.conn.commit()
+    return {"success": True}
+
+
+@app.post("/api/users/downgrade")
+def downgrade_user(req: DowngradeRequest, db: JobDatabase = Depends(get_db)):
+    """Downgrade a user (subscription cancelled)."""
+    cursor = db.conn.cursor()
+    cursor.execute(
+        "UPDATE users SET is_pro = 0, pro_expires_at = NULL WHERE stripe_customer_id = ?",
+        (req.stripe_customer_id,)
+    )
+    db.conn.commit()
+    return {"success": True}
 
 
 if __name__ == "__main__":
