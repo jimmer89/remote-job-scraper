@@ -16,6 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
+  const [resultCount, setResultCount] = useState(0);
   
   // Load stats on mount
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function Home() {
         limit: 50,
       });
       setJobs(response.jobs);
+      setResultCount(response.count);
       setViewMode('results');
     } catch (err) {
       setError('Failed to fetch jobs. Make sure the API is running.');
@@ -58,20 +60,20 @@ export default function Home() {
     setError(null);
     
     try {
-      // Fetch jobs based on quiz answers
       if (answers.noPhone) {
         const response = await getLazyGirlJobs(50);
-        // Filter by categories if specified
         const filtered = answers.categories.length > 0
           ? response.jobs.filter(j => answers.categories.includes(j.category))
           : response.jobs;
         setJobs(filtered.length > 0 ? filtered : response.jobs);
+        setResultCount(filtered.length > 0 ? filtered.length : response.count);
       } else {
         const response = await getJobs({
           category: answers.categories[0],
           limit: 50,
         });
         setJobs(response.jobs);
+        setResultCount(response.count);
       }
       setViewMode('results');
     } catch (err) {
@@ -81,34 +83,41 @@ export default function Home() {
     }
   };
   
-  // Categories for filter
   const categories = stats ? Object.keys(stats.by_category) : [];
   
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen">
       <StatsBar stats={stats} />
       
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      <header className="glass sticky top-0 z-50 border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 
-                className="text-2xl font-bold text-gray-900 cursor-pointer"
-                onClick={() => setViewMode('landing')}
-              >
-                🔍 Remote Job Finder
-              </h1>
-              <p className="text-gray-500 text-sm">Find your perfect remote job</p>
+            <div 
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => setViewMode('landing')}
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
+                <span className="text-white text-xl">🌴</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold gradient-text">
+                  ChillJobs
+                </h1>
+                <p className="text-text-muted text-xs">Remote jobs, no stress</p>
+              </div>
             </div>
-            {viewMode !== 'quiz' && (
-              <button
-                onClick={() => setViewMode('quiz')}
-                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
-              >
-                ✨ Take the Quiz
-              </button>
-            )}
+            
+            <div className="flex items-center gap-3">
+              {viewMode !== 'quiz' && (
+                <button
+                  onClick={() => setViewMode('quiz')}
+                  className="px-5 py-2 bg-gradient-to-r from-primary to-pink-500 text-white font-medium rounded-full hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm"
+                >
+                  ✨ Take the Quiz
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -116,121 +125,228 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Landing View */}
         {viewMode === 'landing' && (
-          <div>
+          <div className="animate-fadeIn">
             {/* Hero Section */}
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Find Your Dream<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                  Remote Job
+            <div className="text-center mb-12 pt-8">
+              {/* Floating badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md mb-6 text-sm">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-text-secondary">
+                  {stats?.no_phone_jobs || 0}+ jobs that don't require phone calls
+                </span>
+              </div>
+              
+              <h2 className="text-4xl md:text-6xl font-bold text-text mb-6 leading-tight">
+                Remote Jobs Without<br />
+                <span className="gradient-text">
+                  The Phone Anxiety
                 </span>
               </h2>
-              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-                {stats?.total_jobs.toLocaleString()}+ remote jobs from {Object.keys(stats?.by_source || {}).length} sources.
-                Updated every 6 hours. No signup required.
+              
+              <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
+                Find your perfect remote job from <strong>{stats?.total_jobs.toLocaleString() || '600'}+</strong> curated positions. 
+                Filter by no-phone requirement, salary, and more.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
                 <button
                   onClick={() => handleSearch({ noPhone: true })}
-                  className="px-8 py-4 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-lg"
+                  className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-secondary to-teal-400 text-white font-semibold rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all text-lg"
                 >
-                  📵 Browse No-Phone Jobs
+                  <span className="text-2xl">📵</span>
+                  Browse No-Phone Jobs
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </button>
                 <button
                   onClick={() => setViewMode('quiz')}
-                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity text-lg"
+                  className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-pink-500 text-white font-semibold rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all text-lg"
                 >
-                  ✨ Find Jobs For Me
+                  <span className="text-2xl">✨</span>
+                  Find My Perfect Job
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </button>
+              </div>
+              
+              {/* Trust indicators */}
+              <div className="flex flex-wrap justify-center gap-6 text-sm text-text-muted mb-12">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span> Updated every 6 hours
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span> No signup required
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span> 100% free to browse
+                </div>
               </div>
             </div>
             
-            {/* Search */}
+            {/* Search Filters */}
             <SearchFilters onSearch={handleSearch} categories={categories} />
             
             {/* Category Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { cat: 'support', emoji: '💬', label: 'Customer Support' },
-                { cat: 'dev', emoji: '💻', label: 'Development' },
-                { cat: 'design', emoji: '🎨', label: 'Design' },
-                { cat: 'marketing', emoji: '📈', label: 'Marketing' },
-                { cat: 'data-entry', emoji: '📊', label: 'Data Entry' },
-                { cat: 'va', emoji: '📋', label: 'Virtual Assistant' },
-                { cat: 'writing', emoji: '✍️', label: 'Writing' },
-                { cat: 'sales', emoji: '🤝', label: 'Sales' },
-              ].map(({ cat, emoji, label }) => (
-                <button
-                  key={cat}
-                  onClick={() => handleSearch({ category: cat })}
-                  className="p-6 bg-white rounded-xl shadow hover:shadow-lg transition-shadow text-center"
-                >
-                  <span className="text-3xl mb-2 block">{emoji}</span>
-                  <span className="font-medium text-gray-700">{label}</span>
-                  <span className="text-gray-400 text-sm block">
-                    {stats?.by_category[cat] || 0} jobs
-                  </span>
-                </button>
-              ))}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-text mb-4">Browse by Category</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { cat: 'support', emoji: '💬', label: 'Customer Support', color: 'from-blue-400 to-blue-600' },
+                  { cat: 'dev', emoji: '💻', label: 'Development', color: 'from-purple-400 to-purple-600' },
+                  { cat: 'design', emoji: '🎨', label: 'Design', color: 'from-pink-400 to-pink-600' },
+                  { cat: 'marketing', emoji: '📈', label: 'Marketing', color: 'from-orange-400 to-orange-600' },
+                  { cat: 'data-entry', emoji: '📊', label: 'Data Entry', color: 'from-green-400 to-green-600' },
+                  { cat: 'va', emoji: '📋', label: 'Virtual Assistant', color: 'from-teal-400 to-teal-600' },
+                  { cat: 'writing', emoji: '✍️', label: 'Writing', color: 'from-indigo-400 to-indigo-600' },
+                  { cat: 'sales', emoji: '🤝', label: 'Sales', color: 'from-yellow-400 to-yellow-600' },
+                ].map(({ cat, emoji, label, color }) => (
+                  <button
+                    key={cat}
+                    onClick={() => handleSearch({ category: cat })}
+                    className="group card p-5 text-center hover:border-primary/50 hover:-translate-y-1 transition-all"
+                  >
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
+                      <span className="text-2xl">{emoji}</span>
+                    </div>
+                    <span className="font-medium text-text">{label}</span>
+                    <span className="text-text-muted text-sm block mt-1">
+                      {stats?.by_category[cat] || 0} jobs
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Features Section */}
+            <div className="card p-8 mb-8 bg-gradient-to-br from-primary/5 to-pink-500/5">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-text mb-2">Why ChillJobs?</h3>
+                <p className="text-text-secondary">Built for people who want remote work without the phone stress</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">📵</span>
+                  </div>
+                  <h4 className="font-semibold text-text mb-2">No-Phone Filter</h4>
+                  <p className="text-text-secondary text-sm">
+                    The only job board that lets you filter specifically for jobs without phone requirements
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">🎯</span>
+                  </div>
+                  <h4 className="font-semibold text-text mb-2">Smart Matching</h4>
+                  <p className="text-text-secondary text-sm">
+                    Take our quiz to find jobs that match your skills and preferences perfectly
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">💰</span>
+                  </div>
+                  <h4 className="font-semibold text-text mb-2">Salary Transparency</h4>
+                  <p className="text-text-secondary text-sm">
+                    Filter for jobs that show salary upfront. No more guessing games
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
         
         {/* Quiz View */}
         {viewMode === 'quiz' && (
-          <div className="py-8">
+          <div className="py-8 animate-fadeIn">
+            <button
+              onClick={() => setViewMode('landing')}
+              className="flex items-center gap-2 text-text-secondary hover:text-text mb-6 transition-colors"
+            >
+              ← Back to home
+            </button>
             <Quiz onComplete={handleQuizComplete} />
           </div>
         )}
         
         {/* Results View */}
         {viewMode === 'results' && (
-          <div>
-            <SearchFilters onSearch={handleSearch} categories={categories} />
+          <div className="animate-fadeIn">
+            <SearchFilters 
+              onSearch={handleSearch} 
+              categories={categories} 
+              initialNoPhone={quizAnswers?.noPhone}
+            />
             
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-gray-500">Finding perfect jobs for you...</p>
+              <div className="text-center py-16">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-text-secondary">Finding your perfect jobs...</p>
               </div>
             ) : error ? (
-              <div className="text-center py-12">
+              <div className="card text-center py-12">
+                <div className="text-4xl mb-4">😕</div>
                 <p className="text-red-500 mb-4">{error}</p>
-                <p className="text-gray-500 text-sm">
-                  Make sure the API is running: <code className="bg-gray-100 px-2 py-1 rounded">uvicorn src.api:app --port 8000</code>
+                <p className="text-text-muted text-sm">
+                  Make sure the API is running: <code className="bg-bg px-2 py-1 rounded">uvicorn src.api:app --port 8000</code>
                 </p>
               </div>
             ) : (
               <>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {jobs.length} jobs found
-                    {quizAnswers?.noPhone && ' (No-Phone)'}
-                  </h2>
+                {/* Results header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-text">
+                      {resultCount} jobs found
+                    </h2>
+                    {quizAnswers?.noPhone && (
+                      <p className="text-text-secondary text-sm mt-1">
+                        Filtered for no-phone positions based on your quiz
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={() => setViewMode('landing')}
-                    className="text-blue-600 hover:underline"
+                    className="text-primary hover:underline font-medium"
                   >
-                    ← Back to search
+                    ← New search
                   </button>
                 </div>
                 
+                {/* Job list */}
                 <div className="grid gap-4">
-                  {jobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
+                  {jobs.map((job, index) => (
+                    <div 
+                      key={job.id} 
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <JobCard job={job} />
+                    </div>
                   ))}
                 </div>
                 
+                {/* Empty state */}
                 {jobs.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">No jobs found matching your criteria.</p>
+                  <div className="card text-center py-16">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className="text-xl font-semibold text-text mb-2">No jobs found</h3>
+                    <p className="text-text-secondary mb-6">
+                      Try adjusting your filters or search terms
+                    </p>
                     <button
                       onClick={() => handleSearch({})}
-                      className="mt-4 text-blue-600 hover:underline"
+                      className="btn-primary"
                     >
                       View all jobs
                     </button>
+                  </div>
+                )}
+                
+                {/* Load more placeholder */}
+                {jobs.length >= 50 && (
+                  <div className="text-center py-8">
+                    <p className="text-text-muted">
+                      Showing first 50 results. More coming soon with Pro! 🚀
+                    </p>
                   </div>
                 )}
               </>
@@ -240,15 +356,44 @@ export default function Home() {
       </div>
       
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-400">
-            Data aggregated from RemoteOK, WeWorkRemotely, Reddit & more.
-            Updated every 6 hours.
-          </p>
-          <p className="text-gray-500 text-sm mt-2">
-            Built with 🦜 by PepLlu & Jaume
-          </p>
+      <footer className="bg-text text-white py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
+                  <span className="text-white text-xl">🌴</span>
+                </div>
+                <span className="text-xl font-bold">ChillJobs</span>
+              </div>
+              <p className="text-gray-400 text-sm">
+                Find your perfect remote job without the phone anxiety. 
+                Updated every 6 hours from 5+ trusted sources.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Categories</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-400">
+                <a href="#" className="hover:text-white transition-colors">Customer Support</a>
+                <a href="#" className="hover:text-white transition-colors">Development</a>
+                <a href="#" className="hover:text-white transition-colors">Design</a>
+                <a href="#" className="hover:text-white transition-colors">Marketing</a>
+                <a href="#" className="hover:text-white transition-colors">Data Entry</a>
+                <a href="#" className="hover:text-white transition-colors">Writing</a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Sources</h4>
+              <p className="text-sm text-gray-400">
+                We aggregate jobs from RemoteOK, WeWorkRemotely, Reddit, Indeed, Glassdoor and more.
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-gray-700 pt-8 text-center">
+            <p className="text-gray-500 text-sm">
+              Built with 🦜 by PepLlu & Jaume • © 2026 ChillJobs
+            </p>
+          </div>
         </div>
       </footer>
     </main>

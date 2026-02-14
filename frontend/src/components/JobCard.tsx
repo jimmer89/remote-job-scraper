@@ -6,74 +6,133 @@ interface JobCardProps {
   job: Job;
 }
 
+const categoryEmojis: Record<string, string> = {
+  'support': '💬',
+  'dev': '💻',
+  'design': '🎨',
+  'marketing': '📈',
+  'data-entry': '📊',
+  'va': '📋',
+  'writing': '✍️',
+  'sales': '🤝',
+  'hr': '👥',
+  'moderation': '🛡️',
+  'other': '📁',
+};
+
 export default function JobCard({ job }: JobCardProps) {
   const salary = formatSalary(job.salary_min, job.salary_max);
+  const categoryEmoji = categoryEmojis[job.category] || '📁';
+  const postedTime = timeAgo(job.scraped_at);
+  const isNew = postedTime.includes('m ago') || postedTime.includes('h ago') || postedTime === 'just now';
   
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-100">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 hover:text-blue-600">
-            <a href={job.url} target="_blank" rel="noopener noreferrer">
-              {job.title}
-            </a>
-          </h3>
-          <p className="text-gray-600 mt-1">{job.company}</p>
+    <article className="card p-5 hover:border-primary-light group animate-fadeIn">
+      {/* Top row: Company info + badges */}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Company logo or initial */}
+          {job.company_logo ? (
+            <img 
+              src={job.company_logo} 
+              alt={job.company}
+              className="w-12 h-12 rounded-xl object-contain bg-gray-50 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-lg">
+                {job.company?.charAt(0).toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+          
+          <div className="min-w-0">
+            <h3 className="font-semibold text-lg text-text line-clamp-1 group-hover:text-primary transition-colors">
+              <a 
+                href={job.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:underline decoration-primary/50 underline-offset-2"
+              >
+                {job.title}
+              </a>
+            </h3>
+            <p className="text-text-secondary text-sm truncate">{job.company}</p>
+          </div>
         </div>
-        {job.company_logo && (
-          <img 
-            src={job.company_logo} 
-            alt={job.company}
-            className="w-12 h-12 rounded-lg object-contain ml-4"
-          />
-        )}
+        
+        {/* Time badge */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isNew && (
+            <span className="badge bg-blue-100 text-blue-700">
+              ✨ New
+            </span>
+          )}
+          <span className="text-text-muted text-sm whitespace-nowrap">
+            {postedTime}
+          </span>
+        </div>
       </div>
       
-      <div className="flex flex-wrap gap-2 mb-3">
+      {/* Badges row */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {/* No Phone badge - PROMINENTE */}
         {job.is_no_phone && (
-          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-            📵 No Phone
+          <span className="badge badge-no-phone text-sm font-bold animate-pulse-slow">
+            📵 No Phone Required
           </span>
         )}
-        {job.category && (
-          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-            {job.category}
-          </span>
-        )}
+        
+        {/* Salary badge */}
         {salary && (
-          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+          <span className="badge badge-salary">
             💰 {salary}
           </span>
         )}
-        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+        
+        {/* Category badge */}
+        {job.category && (
+          <span className="badge badge-category">
+            {categoryEmoji} {job.category.charAt(0).toUpperCase() + job.category.slice(1)}
+          </span>
+        )}
+        
+        {/* Source badge */}
+        <span className="badge badge-source">
           {job.source}
         </span>
       </div>
       
+      {/* Description preview */}
       {job.description && (
-        <p className="text-gray-500 text-sm line-clamp-2 mb-3">
-          {job.description.substring(0, 200)}...
+        <p className="text-text-secondary text-sm line-clamp-2 mb-4 leading-relaxed">
+          {job.description.substring(0, 180)}...
         </p>
       )}
       
-      <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-        <span className="text-gray-400 text-sm">
-          📍 {job.location}
-        </span>
-        <div className="flex items-center gap-3">
-          <span className="text-gray-400 text-sm">
-            {timeAgo(job.scraped_at)}
+      {/* Bottom row: Location + Apply button */}
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div className="flex items-center gap-4 text-sm text-text-muted">
+          <span className="flex items-center gap-1">
+            📍 {job.location || 'Remote'}
           </span>
-          <a
-            href={job.apply_url || job.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Apply →
-          </a>
+          {job.tags && job.tags.length > 0 && (
+            <span className="hidden sm:flex items-center gap-1">
+              🏷️ {job.tags.slice(0, 2).join(', ')}
+            </span>
+          )}
         </div>
+        
+        <a
+          href={job.apply_url || job.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary text-sm py-2 px-5 flex items-center gap-2 group/btn"
+        >
+          Apply Now
+          <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
+        </a>
       </div>
-    </div>
+    </article>
   );
 }

@@ -16,57 +16,51 @@ export interface QuizAnswers {
 
 const QUESTIONS = [
   {
-    id: 'experience',
-    question: 'How many years of work experience do you have?',
+    id: 'noPhone',
+    question: 'Do you prefer jobs without phone calls?',
+    subtitle: 'This is our specialty! We filter for chat/email-only positions.',
     options: [
-      { value: '0-1', label: '< 1 year' },
-      { value: '1-3', label: '1-3 years' },
-      { value: '3-5', label: '3-5 years' },
-      { value: '5+', label: '5+ years' },
-    ],
-  },
-  {
-    id: 'education',
-    question: 'What is your highest level of education?',
-    options: [
-      { value: 'high-school', label: 'High School' },
-      { value: 'some-college', label: 'Some College' },
-      { value: 'bachelors', label: "Bachelor's Degree" },
-      { value: 'masters', label: "Master's or Higher" },
+      { value: 'yes', label: 'Yes, no phone please!', emoji: '📵', highlight: true },
+      { value: 'no', label: 'Phone calls are fine', emoji: '📞', highlight: false },
     ],
   },
   {
     id: 'categories',
-    question: 'What type of work interests you? (Select all)',
+    question: 'What type of work interests you?',
+    subtitle: 'Select all that apply',
     multiple: true,
     options: [
-      { value: 'support', label: '💬 Customer Support' },
-      { value: 'data-entry', label: '📊 Data Entry' },
-      { value: 'va', label: '📋 Virtual Assistant' },
-      { value: 'writing', label: '✍️ Writing/Content' },
-      { value: 'moderation', label: '🛡️ Content Moderation' },
-      { value: 'dev', label: '💻 Development' },
-      { value: 'design', label: '🎨 Design' },
-      { value: 'marketing', label: '📈 Marketing' },
+      { value: 'support', label: 'Customer Support', emoji: '💬' },
+      { value: 'data-entry', label: 'Data Entry', emoji: '📊' },
+      { value: 'va', label: 'Virtual Assistant', emoji: '📋' },
+      { value: 'writing', label: 'Writing/Content', emoji: '✍️' },
+      { value: 'moderation', label: 'Content Moderation', emoji: '🛡️' },
+      { value: 'dev', label: 'Development', emoji: '💻' },
+      { value: 'design', label: 'Design', emoji: '🎨' },
+      { value: 'marketing', label: 'Marketing', emoji: '📈' },
     ],
   },
   {
-    id: 'noPhone',
-    question: 'Do you prefer jobs without phone calls?',
+    id: 'experience',
+    question: 'How many years of work experience do you have?',
+    subtitle: 'Any field counts, not just remote work',
     options: [
-      { value: 'yes', label: '📵 Yes, no phone please!' },
-      { value: 'no', label: '📞 Phone calls are fine' },
+      { value: '0-1', label: 'Less than 1 year', emoji: '🌱' },
+      { value: '1-3', label: '1-3 years', emoji: '🌿' },
+      { value: '3-5', label: '3-5 years', emoji: '🌳' },
+      { value: '5+', label: '5+ years', emoji: '🏆' },
     ],
   },
   {
     id: 'salary',
-    question: 'What is your minimum salary expectation? (annual)',
+    question: 'What is your minimum salary expectation?',
+    subtitle: 'Annual USD equivalent',
     options: [
-      { value: '20000', label: '$20,000+' },
-      { value: '30000', label: '$30,000+' },
-      { value: '40000', label: '$40,000+' },
-      { value: '50000', label: '$50,000+' },
-      { value: '70000', label: '$70,000+' },
+      { value: '20000', label: '$20,000+', emoji: '💵' },
+      { value: '30000', label: '$30,000+', emoji: '💰' },
+      { value: '40000', label: '$40,000+', emoji: '💰' },
+      { value: '50000', label: '$50,000+', emoji: '🤑' },
+      { value: '70000', label: '$70,000+', emoji: '🤑' },
     ],
   },
 ];
@@ -91,9 +85,9 @@ export default function Quiz({ onComplete }: QuizProps) {
     } else {
       setAnswers({ ...answers, [question.id]: value });
       
-      // Auto advance for single selection
+      // Auto advance for single selection (with slight delay for UX)
       if (currentStep < QUESTIONS.length - 1) {
-        setTimeout(() => setCurrentStep(currentStep + 1), 300);
+        setTimeout(() => setCurrentStep(currentStep + 1), 400);
       }
     }
   };
@@ -104,8 +98,8 @@ export default function Quiz({ onComplete }: QuizProps) {
     } else {
       // Quiz complete
       onComplete({
-        experience: answers.experience,
-        education: answers.education,
+        experience: answers.experience || '0-1',
+        education: answers.education || 'any',
         categories: answers.categories,
         noPhone: answers.noPhone === 'yes',
         salaryMin: parseInt(answers.salary) || 0,
@@ -116,71 +110,127 @@ export default function Quiz({ onComplete }: QuizProps) {
   const canProceed = question.id === 'categories' 
     ? answers.categories?.length > 0
     : answers[question.id];
+
+  const isLastQuestion = currentStep === QUESTIONS.length - 1;
   
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex justify-between text-sm text-gray-500 mb-2">
-          <span>Question {currentStep + 1} of {QUESTIONS.length}</span>
-          <span>{Math.round(progress)}% complete</span>
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-pink-500 mb-4">
+          <span className="text-3xl">✨</span>
         </div>
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <h1 className="text-2xl font-bold gradient-text mb-2">Find Your Perfect Job</h1>
+        <p className="text-text-secondary">Answer a few questions to get personalized results</p>
+      </div>
+      
+      {/* Progress bar */}
+      <div className="card p-4 mb-6">
+        <div className="flex justify-between text-sm text-text-muted mb-2">
+          <span>Question {currentStep + 1} of {QUESTIONS.length}</span>
+          <span className="font-medium text-primary">{Math.round(progress)}%</span>
+        </div>
+        <div className="h-2 bg-bg rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-primary to-pink-500 transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
       
-      {/* Question */}
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        {question.question}
-      </h2>
-      
-      {/* Options */}
-      <div className="space-y-3 mb-8">
-        {question.options.map((option) => {
-          const isSelected = question.id === 'categories'
-            ? answers.categories?.includes(option.value)
-            : answers[question.id] === option.value;
-          
-          return (
-            <button
-              key={option.value}
-              onClick={() => handleSelect(option.value)}
-              className={`w-full p-4 text-left rounded-xl border-2 transition-all ${
-                isSelected
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <span className="font-medium">{option.label}</span>
-            </button>
-          );
-        })}
+      {/* Question Card */}
+      <div className="card p-8 mb-6 animate-fadeIn" key={currentStep}>
+        <h2 className="text-2xl font-bold text-text mb-2">
+          {question.question}
+        </h2>
+        {question.subtitle && (
+          <p className="text-text-secondary mb-6">{question.subtitle}</p>
+        )}
+        
+        {/* Options */}
+        <div className={`grid gap-3 ${question.multiple ? 'grid-cols-2' : ''}`}>
+          {question.options.map((option) => {
+            const isSelected = question.id === 'categories'
+              ? answers.categories?.includes(option.value)
+              : answers[question.id] === option.value;
+            
+            const isHighlight = 'highlight' in option && option.highlight;
+            
+            return (
+              <button
+                key={option.value}
+                onClick={() => handleSelect(option.value)}
+                className={`
+                  group p-4 text-left rounded-xl border-2 transition-all
+                  ${isSelected
+                    ? isHighlight
+                      ? 'border-secondary bg-secondary/10 text-secondary'
+                      : 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:border-primary/50 hover:bg-bg'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`
+                    w-10 h-10 rounded-lg flex items-center justify-center text-xl
+                    ${isSelected 
+                      ? isHighlight ? 'bg-secondary/20' : 'bg-primary/20'
+                      : 'bg-bg group-hover:bg-primary/10'
+                    }
+                  `}>
+                    {option.emoji}
+                  </span>
+                  <span className="font-medium">{option.label}</span>
+                  {isSelected && (
+                    <span className="ml-auto text-lg">✓</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
       
       {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center">
         <button
           onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
           disabled={currentStep === 0}
-          className="px-6 py-3 text-gray-600 disabled:opacity-50"
+          className="px-4 py-2 text-text-secondary hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           ← Back
         </button>
         
-        {(question.id === 'categories' || currentStep === QUESTIONS.length - 1) && (
+        {(question.multiple || isLastQuestion) && (
           <button
             onClick={handleNext}
             disabled={!canProceed}
-            className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`
+              px-8 py-3 font-semibold rounded-xl transition-all
+              ${canProceed
+                ? 'bg-gradient-to-r from-primary to-pink-500 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
+                : 'bg-border text-text-muted cursor-not-allowed'
+              }
+            `}
           >
-            {currentStep === QUESTIONS.length - 1 ? 'Find Jobs →' : 'Next →'}
+            {isLastQuestion ? (
+              <span className="flex items-center gap-2">
+                Find My Jobs
+                <span>🎯</span>
+              </span>
+            ) : (
+              'Continue →'
+            )}
           </button>
         )}
       </div>
+      
+      {/* Skip hint */}
+      {!question.multiple && !isLastQuestion && (
+        <p className="text-center text-text-muted text-sm mt-6">
+          Select an option to continue
+        </p>
+      )}
     </div>
   );
 }
