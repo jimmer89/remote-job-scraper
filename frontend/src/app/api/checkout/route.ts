@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { authOptions } from '@/lib/auth';
 
 export async function POST() {
   try {
-    // Check if Stripe is configured
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
       return NextResponse.json(
-        { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY and STRIPE_PRICE_ID.' },
+        { error: 'Stripe is not configured' },
         { status: 500 }
       );
     }
@@ -23,7 +23,12 @@ export async function POST() {
       );
     }
 
-    // Create Stripe checkout session
+    // Determine base URL from NEXTAUTH_URL or request headers
+    const headersList = await headers();
+    const host = headersList.get('host') || '';
+    const proto = headersList.get('x-forwarded-proto') || 'https';
+    const baseUrl = process.env.NEXTAUTH_URL || `${proto}://${host}`;
+
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -33,8 +38,8 @@ export async function POST() {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXTAUTH_URL}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/pricing`,
+      success_url: `${baseUrl}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/pricing`,
       customer_email: session.user.email,
       metadata: {
         userId: (session.user as any).id,
@@ -44,7 +49,7 @@ export async function POST() {
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error: any) {
-    console.error('Stripe error:', error);
+    console.error('Stripe checkout error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to create checkout session' },
       { status: 500 }

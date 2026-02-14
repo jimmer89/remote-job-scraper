@@ -8,6 +8,7 @@ export default function PricingPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubscribe = async () => {
     if (!session) {
@@ -16,19 +17,22 @@ export default function PricingPage() {
     }
 
     setLoading(true);
+    setError('');
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      
+
       const data = await res.json();
-      
+
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        setError(data.error || 'Something went wrong. Please try again.');
       }
-    } catch (error) {
-      console.error('Checkout error:', error);
+    } catch (err) {
+      setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -149,6 +153,12 @@ export default function PricingPage() {
                 <span><strong>Save favorites</strong> - Build your list</span>
               </li>
             </ul>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-300/30 rounded-xl text-sm">
+                {error}
+              </div>
+            )}
 
             <button
               onClick={handleSubscribe}
