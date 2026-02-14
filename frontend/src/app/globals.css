@@ -75,6 +75,17 @@ body {
   min-height: 100vh;
 }
 
+/* Make all clickable elements show pointer cursor */
+button, 
+a, 
+[role="button"],
+input[type="submit"],
+input[type="button"],
+select,
+.cursor-pointer {
+  cursor: pointer;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

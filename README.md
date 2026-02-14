@@ -1,214 +1,127 @@
-# 🔍 Remote Job Scraper
+# ChillJobs 🌴
 
-Encuentra trabajos remotos "lazy girl jobs" - posiciones entry-level, sin teléfono, bien pagadas.
+**Remote Jobs. No Calls Required.**
 
-## 🌐 Live Demo
+A job board for people who want remote work without the phone calls. The only job board with a no-phone filter.
 
-| Servicio | URL |
-|----------|-----|
-| **Frontend** | https://frontend-three-azure-48.vercel.app |
-| **API** | https://remote-job-scraper-production-2b9c.up.railway.app |
-| **API Docs** | https://remote-job-scraper-production-2b9c.up.railway.app/docs |
+🌐 **Live:** https://frontend-three-azure-48.vercel.app
 
-## ✨ Features
+## Features
 
-- 🔄 **Multi-source scraping**: WeWorkRemotely, RemoteOK, Reddit, Indeed, Glassdoor
-- 📞 **No-phone filter**: Detecta trabajos que no requieren llamadas
-- 💰 **Salary extraction**: Parsea salarios de descripciones
-- 🏷️ **Auto-categorization**: dev, support, sales, marketing, design, etc.
-- 🎯 **Quiz interactivo**: Encuentra tu trabajo ideal
-- ⚡ **API REST**: FastAPI con documentación Swagger
+### For Job Seekers
+- 📵 **No-Phone Filter** - Find jobs that don't require phone calls
+- 💰 **Salary Transparency** - See pay before you apply
+- 🎯 **Smart Quiz** - Match with your perfect job
+- 🔄 **Updated Every 6 Hours** - Fresh jobs from 5+ sources
 
-## 📊 Stats Actuales (2026-02-14)
+### Tech Stack
+- **Frontend:** Next.js 16, React, Tailwind CSS
+- **Backend:** Python, FastAPI, SQLite
+- **Auth:** NextAuth.js
+- **Payments:** Stripe
+- **Hosting:** Vercel (frontend), Railway (API)
+
+## Project Structure
 
 ```
-📦 Total activos: 1,039 jobs
-🚫 Sin teléfono: 254
-💰 Con salario: 441
-👨‍💻 Dev jobs: 195
-
-By Source:
-- WeWorkRemotely: 329
-- Indeed (JobSpy): 146
-- RemoteOK: 98
-- Reddit: 88
+remote-job-scraper/
+├── src/                    # Backend Python code
+│   ├── api.py             # FastAPI REST API
+│   ├── database.py        # SQLite database
+│   ├── scrapers/          # Job scrapers
+│   └── main.py            # CLI interface
+├── frontend/              # Next.js frontend
+│   ├── src/
+│   │   ├── app/           # Pages & API routes
+│   │   ├── components/    # React components
+│   │   ├── lib/           # Utilities & API client
+│   │   └── hooks/         # Custom hooks
+│   └── public/            # Static assets
+└── docs/                  # Documentation
 ```
 
-### Último scrape
+## Getting Started
 
-| Fuente | Encontrados | Nuevos |
-|--------|-------------|--------|
-| RemoteOK | 98 | 5 |
-| WeWorkRemotely | 329 | 1 |
-| Reddit | 88 | 4 |
-| JobSpy (Indeed) | 146 | 64 |
-| **Total** | **661** | **74** |
-
-⚠️ **Errores conocidos:**
-- ZipRecruiter: GDPR blocked (EU)
-- Glassdoor: Rate limit 429
-
-## 🛠️ Tech Stack
-
-**Backend:**
-- Python 3.12
-- FastAPI
-- SQLite
-- JobSpy, BeautifulSoup, PRAW
-
-**Frontend:**
-- Next.js 16
-- TypeScript
-- Tailwind CSS
-
-**Deployment:**
-- Railway (API)
-- Vercel (Frontend)
-
-## 🚀 Local Development
-
-### Backend
+### Backend API
 
 ```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Run scraper
-python src/main.py scrape
-
-# Start API
-python src/main.py api
-# or
-uvicorn src.api:app --reload
+# Run API server
+python -m uvicorn src.api:app --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Copy environment variables
+cp .env.example .env.local
+# Edit .env.local with your values
+
+# Run development server
 npm run dev
 ```
 
-## 📡 API Endpoints
+## Environment Variables
+
+### Frontend (.env.local)
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key
+
+# Optional: Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Optional: Stripe
+STRIPE_SECRET_KEY=
+STRIPE_PRICE_ID=
+STRIPE_WEBHOOK_SECRET=
+```
+
+## Business Model
+
+- **Free Tier:** 1 job preview per search
+- **Pro Tier ($9.99/mo):**
+  - Unlimited job access
+  - No-Phone filter
+  - Salary filter
+  - Email alerts
+  - 24h early access
+
+## Data Sources
+
+Jobs are aggregated from:
+- RemoteOK
+- WeWorkRemotely
+- Reddit (r/remotejobs, r/forhire)
+- Indeed (via JobSpy)
+- Glassdoor (via JobSpy)
+
+## API Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /` | Health check |
-| `GET /docs` | Swagger UI |
-| `GET /api/stats` | Database statistics |
 | `GET /api/jobs` | List jobs with filters |
-| `GET /api/jobs/{id}` | Get single job |
-| `GET /api/lazy-girl-jobs` | Pre-filtered ideal jobs |
+| `GET /api/stats` | Job statistics |
+| `GET /api/categories` | Available categories |
+| `GET /api/lazy-girl-jobs` | Curated easy jobs |
 
-### Query Parameters
-
-- `limit` - Number of results (default: 50)
-- `offset` - Pagination offset
-- `no_phone` - Filter no-phone jobs (true/false)
-- `category` - Filter by category
-- `has_salary` - Only jobs with salary info
-- `source` - Filter by source
-- `search` - Text search in title/company
-
-## 📁 Project Structure
-
-```
-remote-job-scraper/
-├── src/
-│   ├── api.py           # FastAPI application
-│   ├── database.py      # SQLite operations
-│   ├── main.py          # CLI entrypoint
-│   └── scrapers/        # Job scrapers
-│       ├── base.py
-│       ├── remoteok.py
-│       ├── weworkremotely.py
-│       ├── reddit.py
-│       └── jobspy_scraper.py
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   └── lib/
-│   └── package.json
-├── data/
-│   └── jobs_seed.db     # Seed database
-├── requirements.txt
-├── railway.toml
-└── README.md
-```
-
-## 🔄 Cron Jobs
-
-Actualmente el scraper corre cada 6 horas via **cron local** (Clawdbot gateway).
-
-```bash
-0 */6 * * * python src/main.py scrape
-```
-
----
-
-## 📋 TODO - Escalabilidad
-
-### 🎯 Problema actual
-El cron depende del PC local de Jaume. Si está apagado, no se ejecuta el scraper y los datos se quedan desactualizados.
-
-### ✅ Solución propuesta: GitHub Actions
-
-Migrar el cron a GitHub Actions para que sea independiente:
-
-```yaml
-# .github/workflows/scrape.yml
-name: Scrape Jobs
-on:
-  schedule:
-    - cron: '0 */6 * * *'  # Cada 6h
-  workflow_dispatch:  # Manual trigger
-
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run scraper
-        run: python src/main.py scrape
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
-          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
-      - name: Upload DB to Railway
-        run: # Script para sincronizar DB con Railway
-```
-
-### 📝 Pasos para implementar
-
-1. [ ] Crear workflow `.github/workflows/scrape.yml`
-2. [ ] Configurar secrets en GitHub (Reddit API, DB URL)
-3. [ ] Modificar scraper para escribir directamente a Railway DB (PostgreSQL)
-4. [ ] Migrar de SQLite a PostgreSQL en Railway
-5. [ ] Desactivar cron local de Clawdbot
-6. [ ] Testear ejecución automática
-
-### 💡 Alternativas consideradas
-
-| Opción | Pros | Contras |
-|--------|------|---------|
-| **GitHub Actions** ⭐ | Gratis, ya tiene repo, logs visibles | Necesita sync con DB |
-| Railway Cron | Todo en un sitio | Puede costar $ |
-| cron-job.org + endpoint | Simple | Timeout en scrapers largos |
-
----
-
-## 📝 License
-
-MIT
-
----
+## Contributing
 
 Built with 🦜 by PepLlu & Jaume
+
+## License
+
+MIT

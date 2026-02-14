@@ -1,84 +1,88 @@
-# 📋 ONGOING - Remote Job Scraper
+# ChillJobs - Estado del Proyecto
 
-## ✅ COMPLETED (2026-02-13)
+**Última actualización:** 2026-02-14 22:35
 
-### Backend
-- [x] Multi-source scraper (5 fuentes)
-- [x] SQLite database
-- [x] FastAPI REST API
-- [x] No-phone detection
-- [x] Salary parsing
-- [x] Auto-categorization
-- [x] "Lazy Girl Jobs" endpoint
-- [x] Railway deployment
+## 🟢 Estado: LIVE
+
+**URL Producción:** https://frontend-three-azure-48.vercel.app
+**API:** https://remote-job-scraper-production-2b9c.up.railway.app
+
+## ✅ Completado
+
+### Infraestructura
+- [x] Backend API en Railway
+- [x] Frontend en Vercel
+- [x] Base de datos SQLite con jobs
+- [x] Scraping automático cada 6h (cron en Railway)
 
 ### Frontend
-- [x] Next.js setup
-- [x] Quiz interactivo
-- [x] Job cards
-- [x] Filtros
-- [x] Stats bar
-- [x] Vercel deployment
+- [x] Rediseño completo con branding ChillJobs
+- [x] Landing page con hero, CTAs, categorías
+- [x] Sistema de búsqueda y filtros
+- [x] Quiz de matching
+- [x] Página de pricing
+- [x] Página de login/registro
+- [x] Modal de upgrade
+- [x] Cards bloqueadas para free users
+- [x] Navegación con historial (botón atrás)
 
-### DevOps
-- [x] GitHub repo
-- [x] Railway API deployment
-- [x] Vercel frontend deployment
-- [x] Seed database for cold starts
+### Autenticación
+- [x] NextAuth configurado
+- [x] Login con email/password
+- [x] Registro de usuarios
+- [x] Sesiones JWT
 
-## 🌐 LIVE URLs
+### Modelo Freemium
+- [x] Free: 1 job visible
+- [x] Pro: Jobs ilimitados + filtros avanzados
+- [x] Filtros No-Phone y Salary bloqueados para free
+- [x] UI de upgrade
 
-- **Frontend:** https://frontend-three-azure-48.vercel.app
-- **API:** https://remote-job-scraper-production-2b9c.up.railway.app
-- **Docs:** https://remote-job-scraper-production-2b9c.up.railway.app/docs
-- **Repo:** https://github.com/jimmer89/remote-job-scraper
+### Stripe (estructura)
+- [x] Endpoint de checkout
+- [x] Webhook de suscripción
+- [x] Página de éxito
 
-## 📊 CURRENT STATS
+## 🔴 Pendiente
 
-```
-Total: 669 jobs
-No-phone: 116
-With salary: 201
-Sources: 5 (WWR, RemoteOK, Reddit, Indeed, Glassdoor)
-```
+### Alta Prioridad
+- [ ] **Configurar Stripe** - Añadir API keys reales
+- [ ] **Dominio personalizado** - Jaume ya lo tiene
+- [ ] **Base de datos de usuarios** - Ahora es in-memory
 
-## 🔜 NEXT STEPS (Optional)
+### Media Prioridad
+- [ ] Google OAuth - Credenciales de Google Cloud
+- [ ] Email alerts para nuevos jobs
+- [ ] Guardar favoritos
 
-### Mejoras de Scraping
-- [ ] Añadir LinkedIn Jobs
-- [ ] Añadir AngelList/Wellfound
-- [ ] Añadir FlexJobs
-- [ ] Mejorar detección no-phone con ML
-
-### Mejoras de Frontend
-- [ ] Guardar favoritos (localStorage)
-- [ ] Aplicar directamente desde la web
-- [ ] Alertas por email de nuevos jobs
+### Baja Prioridad
+- [ ] Newsletter funcional
+- [ ] SEO mejorado
 - [ ] Dark mode
+- [ ] PWA / App móvil
 
-### Mejoras de API
-- [ ] Rate limiting
-- [ ] API keys para acceso público
-- [ ] Webhook notifications
-- [ ] Job recommendations
+## 📊 Métricas Actuales
 
-### DevOps
-- [ ] Railway cron para scraping automático
-- [ ] Monitoring/alerting
-- [ ] Custom domain
+- **Total Jobs:** ~1,039
+- **No-Phone Jobs:** ~254
+- **Con Salary:** ~441
+- **Sources:** 5 (RemoteOK, WWR, Reddit, Indeed, Glassdoor)
 
-## 🐛 KNOWN ISSUES
+## 🔧 Para Desarrollar Localmente
 
-- Railway filesystem is ephemeral (seed DB solves cold starts)
-- Some job descriptions truncated
-- Reddit scraper depends on PRAW rate limits
+```bash
+# Backend
+cd ~/projects/remote-job-scraper
+source venv/bin/activate
+python -m uvicorn src.api:app --port 8000
 
-## 📝 NOTES
+# Frontend
+cd frontend
+npm run dev
+```
 
-- Scraping cada 6h via cron local (puede moverse a Railway)
-- Seed DB incluida en repo (~1.4MB)
-- API permite CORS desde cualquier origen
+## 📝 Notas
 
----
-
-Last updated: 2026-02-13 23:20
+- Los usuarios se guardan en memoria (Map en auth.ts) - se pierden al reiniciar
+- Para persistir usuarios, migrar a SQLite o Postgres
+- El botón "Continue with Google" está visible pero no funciona sin credenciales

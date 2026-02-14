@@ -11,6 +11,8 @@ interface SearchFiltersProps {
   }) => void;
   categories: string[];
   initialNoPhone?: boolean;
+  isPro?: boolean;
+  onRequirePro?: (feature: string) => void;
 }
 
 const categoryLabels: Record<string, { emoji: string; label: string }> = {
@@ -27,10 +29,16 @@ const categoryLabels: Record<string, { emoji: string; label: string }> = {
   'other': { emoji: '📁', label: 'Other' },
 };
 
-export default function SearchFilters({ onSearch, categories, initialNoPhone = false }: SearchFiltersProps) {
+export default function SearchFilters({ 
+  onSearch, 
+  categories, 
+  initialNoPhone = false,
+  isPro = false,
+  onRequirePro
+}: SearchFiltersProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [noPhone, setNoPhone] = useState(initialNoPhone);
+  const [noPhone, setNoPhone] = useState(initialNoPhone && isPro);
   const [hasSalary, setHasSalary] = useState(false);
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,8 +46,8 @@ export default function SearchFilters({ onSearch, categories, initialNoPhone = f
     onSearch({
       search: search || undefined,
       category: category || undefined,
-      noPhone,
-      hasSalary,
+      noPhone: isPro ? noPhone : false,
+      hasSalary: isPro ? hasSalary : false,
     });
   };
   
@@ -48,12 +56,16 @@ export default function SearchFilters({ onSearch, categories, initialNoPhone = f
     onSearch({
       search: search || undefined,
       category: cat || undefined,
-      noPhone,
-      hasSalary,
+      noPhone: isPro ? noPhone : false,
+      hasSalary: isPro ? hasSalary : false,
     });
   };
 
   const toggleNoPhone = () => {
+    if (!isPro) {
+      onRequirePro?.('No-Phone filter');
+      return;
+    }
     const newValue = !noPhone;
     setNoPhone(newValue);
     onSearch({
@@ -65,6 +77,10 @@ export default function SearchFilters({ onSearch, categories, initialNoPhone = f
   };
 
   const toggleHasSalary = () => {
+    if (!isPro) {
+      onRequirePro?.('Salary filter');
+      return;
+    }
     const newValue = !hasSalary;
     setHasSalary(newValue);
     onSearch({
@@ -137,32 +153,44 @@ export default function SearchFilters({ onSearch, categories, initialNoPhone = f
         <button
           onClick={toggleNoPhone}
           className={`
-            flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all
-            ${noPhone 
+            relative flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all
+            ${noPhone && isPro
               ? 'bg-secondary text-white shadow-md' 
               : 'bg-white border-2 border-secondary text-secondary hover:bg-secondary/10'
             }
+            ${!isPro ? 'opacity-80' : ''}
           `}
         >
           <span className="text-lg">📵</span>
           No Phone Required
-          {noPhone && <span className="ml-1">✓</span>}
+          {noPhone && isPro && <span className="ml-1">✓</span>}
+          {!isPro && (
+            <span className="absolute -top-2 -right-2 px-1.5 py-0.5 bg-accent text-white text-[10px] font-bold rounded-full">
+              PRO
+            </span>
+          )}
         </button>
         
         {/* Has Salary filter */}
         <button
           onClick={toggleHasSalary}
           className={`
-            flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all
-            ${hasSalary 
+            relative flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all
+            ${hasSalary && isPro
               ? 'bg-accent text-white shadow-md' 
               : 'bg-white border-2 border-accent text-accent hover:bg-accent/10'
             }
+            ${!isPro ? 'opacity-80' : ''}
           `}
         >
           <span className="text-lg">💰</span>
           Shows Salary
-          {hasSalary && <span className="ml-1">✓</span>}
+          {hasSalary && isPro && <span className="ml-1">✓</span>}
+          {!isPro && (
+            <span className="absolute -top-2 -right-2 px-1.5 py-0.5 bg-accent text-white text-[10px] font-bold rounded-full">
+              PRO
+            </span>
+          )}
         </button>
         
         {/* Clear filters */}
