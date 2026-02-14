@@ -1,176 +1,146 @@
-# 🚀 ChillJobs - Plan de Acción
+# ChillJobs - Sprint de 1 Semana
 
-**Decisiones tomadas:**
-- ✅ Nombre: **ChillJobs**
-- ✅ Modelo: **Freemium desde el principio**
-- ✅ Enfoque: **B2C (usuarios)**
-
----
-
-## 📅 Semana 1: Fundamentos
-
-### Día 1-2: Dominio y Branding
-- [ ] Comprar dominio (verificar disponibilidad):
-  - Opción 1: `chilljobs.com` (~$12/año)
-  - Opción 2: `chilljobs.co` (~$25/año)
-  - Opción 3: `chilljobs.io` (~$35/año)
-  - Opción 4: `getchilljobs.com` (si .com está tomado)
-- [ ] Crear logo en Canva/Figma
-- [ ] Definir paleta de colores:
-  ```
-  Primary: #7C3AED (purple chill)
-  Secondary: #10B981 (mint green)
-  Accent: #F59E0B (warm yellow)
-  Background: #F8FAFC (soft white)
-  ```
-- [ ] Elegir mascota/icono (sloth? chill cat?)
-
-### Día 3-4: Rebrand Frontend
-- [ ] Cambiar título y meta tags
-- [ ] Actualizar logo/header
-- [ ] Añadir footer con links
-- [ ] Actualizar colores Tailwind
-- [ ] Añadir página "About"
-
-### Día 5-7: Email Capture + Analytics
-- [ ] Integrar email capture (ConvertKit free / Resend)
-- [ ] Añadir Google Analytics / Plausible
-- [ ] Crear popup/banner para newsletter
-- [ ] Configurar dominio en Vercel
+> Objetivo: Dejar ChillJobs listo para cobrar y lanzar
+> Criterio de exito: un usuario puede registrarse, pagar $9.99, y acceder a Pro
+> Post-sprint: lanzar en Reddit/Product Hunt y evaluar traccion
 
 ---
 
-## 📅 Semana 2: Freemium MVP
+## DIA 1: Revenue Ready (bloqueantes de cobro)
 
-### Límites Free Tier
-```javascript
-FREE_LIMITS = {
-  jobsPerDay: 10,
-  alertsEnabled: false,
-  newJobsDelay: '24h',
-  savedJobs: 5,
-  searchHistory: false,
-  ads: true
-}
+### 1. Configurar Stripe (~30 min)
+- [ ] Crear cuenta Stripe (si no existe)
+- [ ] Crear producto: "ChillJobs Pro Monthly" — $9.99/mes
+- [ ] Crear producto: "ChillJobs Pro Yearly" — $79/ano
+- [ ] Obtener API keys del Dashboard
+- [ ] Configurar en Vercel:
+  - `STRIPE_SECRET_KEY=sk_live_...`
+  - `STRIPE_PRICE_ID=price_...`
+  - `STRIPE_WEBHOOK_SECRET=whsec_...`
+- [ ] Crear webhook en Stripe Dashboard apuntando a la URL de Vercel
+- **Entregable:** Checkout flow funcional end-to-end
 
-PRO_FEATURES = {
-  jobsPerDay: Infinity,
-  alertsEnabled: true,
-  newJobsDelay: '0h', // instant
-  savedJobs: Infinity,
-  searchHistory: true,
-  ads: false,
-  price: '$9.99/month or $79/year'
-}
-```
+### 2. Hashear passwords (~30 min)
+- [ ] Implementar bcryptjs en `frontend/src/lib/auth.ts`
+- [ ] Hash en registro, compare en login
+- **Entregable:** Passwords hasheados en produccion
 
-### Implementación
-- [ ] Sistema de auth (Clerk / NextAuth / Supabase)
-- [ ] Contador de jobs vistos por día
-- [ ] UI de "upgrade to Pro" cuando llega al límite
-- [ ] Página de pricing
-- [ ] Guardar jobs favoritos (localStorage para free, sync para pro)
+### 3. Fijar NextAuth secret (~5 min)
+- [ ] Generar secret aleatorio
+- [ ] Configurar `NEXTAUTH_SECRET` en Vercel
+- **Entregable:** Secret de produccion configurado
 
 ---
 
-## 📅 Semana 3: Pagos
+## DIA 2: Persistencia de usuarios (bloqueante critico)
 
-### Stripe Integration
-- [ ] Crear cuenta Stripe
-- [ ] Configurar productos:
-  - ChillJobs Pro Monthly: $9.99
-  - ChillJobs Pro Yearly: $79 (33% descuento)
-- [ ] Checkout page
-- [ ] Webhook para activar pro
-- [ ] Customer portal (manage subscription)
-
-### Páginas necesarias
-- [ ] `/pricing` - Comparación Free vs Pro
-- [ ] `/checkout` - Stripe checkout
-- [ ] `/account` - Gestión de suscripción
-- [ ] `/success` - Post-pago
+### 4. Migrar users de in-memory a DB (~4-6h)
+- [ ] Decidir: SQLite (simple) o PostgreSQL via Railway (escalable)
+- [ ] Crear tabla `users` (id, email, password_hash, name, is_pro, stripe_customer_id, created_at)
+- [ ] Migrar auth.ts para leer/escribir de DB en vez de Map()
+- [ ] Actualizar webhook de Stripe para persistir upgrade a Pro
+- [ ] Testear flujo completo: register → login → upgrade → Pro features
+- **Entregable:** Usuarios persisten entre redeployments
 
 ---
 
-## 📅 Semana 4: Launch
+## DIA 3: Dominio + credibilidad
 
-### Pre-Launch (3-5 días antes)
-- [ ] Preparar assets para Product Hunt
-- [ ] Escribir post para Reddit (r/remotejobs, r/SideProject)
-- [ ] Crear thread para Twitter/X
-- [ ] Preparar email para waitlist (si hay)
+### 5. Configurar dominio (~15 min)
+- [ ] Apuntar dominio a Vercel (DNS)
+- [ ] Verificar SSL automatico
+- [ ] Actualizar `NEXTAUTH_URL` en Vercel
+- [ ] Actualizar API CORS para permitir el nuevo dominio
+- **Entregable:** ChillJobs accesible desde dominio propio
 
-### Launch Day Checklist
-- [ ] Product Hunt submit (martes o miércoles, 12:01 AM PT)
-- [ ] Post Reddit
-- [ ] Tweet/Post en X
-- [ ] Post en Hacker News "Show HN"
-- [ ] Compartir en LinkedIn
-- [ ] Notificar amigos/network
-
-### Post-Launch
-- [ ] Responder todos los comentarios
-- [ ] Recoger feedback
-- [ ] Hotfix bugs críticos
-- [ ] Celebrar 🎉
+### 6. Google OAuth (~30 min)
+- [ ] Crear proyecto en Google Cloud Console
+- [ ] Obtener `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`
+- [ ] Configurar en Vercel
+- [ ] Testear login con Google
+- **Entregable:** "Continue with Google" funcional
 
 ---
 
-## 💰 Proyección Mes 1
+## DIA 4: Email alerts (killer feature Pro)
 
-| Métrica | Target |
+### 7. Implementar email alerts (~4h)
+- [ ] Integrar Resend (ya usado en CRMFacil, gratis)
+- [ ] Crear endpoint para gestionar alertas (categoria, frecuencia)
+- [ ] Cron job: cada 6h, buscar jobs nuevos que matcheen preferencias
+- [ ] Enviar email con jobs nuevos a Pro users
+- [ ] UI en frontend para configurar alertas
+- **Entregable:** Pro users reciben emails con jobs nuevos automaticamente
+
+---
+
+## DIA 5: Test completo + QA
+
+### 8. Test end-to-end (~2h)
+- [ ] Registrar usuario nuevo
+- [ ] Verificar que persiste tras restart
+- [ ] Login con email y con Google
+- [ ] Ver jobs en tier gratis (1 visible, resto blurred)
+- [ ] Hacer upgrade via Stripe checkout
+- [ ] Verificar que Pro features se desbloquean
+- [ ] Verificar email alerts para Pro
+- [ ] Verificar en movil (responsive)
+- **Entregable:** Flujo completo verificado sin errores
+
+### 9. Limpieza pre-lanzamiento (~1h)
+- [ ] Actualizar meta tags (OG image, title, description)
+- [ ] Verificar que Google indexa correctamente
+- [ ] Revisar textos/copy en la landing
+- [ ] Eliminar console.logs y TODO comments
+- **Entregable:** Producto pulido para lanzamiento
+
+---
+
+## DIA 6-7: Lanzamiento
+
+### 10. Preparar assets de lanzamiento (~2h)
+- [ ] 5+ screenshots del producto
+- [ ] Video demo de 60 seg (Loom o similar)
+- [ ] Post para Reddit (r/remotejobs, r/SideProject, r/socialanxiety)
+- [ ] Preparar Product Hunt listing
+- [ ] Tweet de lanzamiento
+
+### 11. Lanzar
+- [ ] Post en Reddit (3 subreddits)
+- [ ] Product Hunt submit
+- [ ] Tweet/X post
+- [ ] Hacker News "Show HN"
+- **Entregable:** ChillJobs publicamente lanzado
+
+---
+
+## Evaluacion post-lanzamiento (7 dias despues)
+
+### Metricas a medir:
+| Metrica | Umbral "seguir" | Umbral "pausar" |
+|---------|-----------------|-----------------|
+| Registros | >50 | <20 |
+| Pro subs | >5 | 0 |
+| Visitantes unicos | >500 | <100 |
+| Feedback positivo | Cualquier | Ninguno |
+
+### Decision:
+- **Si hay traccion:** Seguir con marketing organico (TikTok, blog SEO, newsletter)
+- **Si no hay traccion:** Pausar y redirigir esfuerzo a chatbot.deals
+
+---
+
+## Archivos clave a tocar
+
+| Archivo | Cambio |
 |---------|--------|
-| Visitantes únicos | 5,000 |
-| Signups (email) | 500 |
-| Pro conversions | 10-20 |
-| MRR | $100-200 |
+| `frontend/src/lib/auth.ts` | Hash passwords, migrar a DB |
+| `frontend/src/app/api/checkout/route.ts` | Verificar Stripe keys |
+| `frontend/src/app/api/webhook/route.ts` | Verificar webhook flow |
+| `frontend/.env.production` | Anadir todas las keys |
+| `src/api.py` | Actualizar CORS |
 
 ---
 
-## 🛠️ Tech Stack Final
-
-```
-Frontend:     Next.js + Tailwind (Vercel)
-Backend:      FastAPI + SQLite (Railway)
-Auth:         Clerk o Supabase Auth
-Payments:     Stripe
-Email:        Resend o ConvertKit
-Analytics:    Plausible (privacy-friendly)
-Domain:       Cloudflare (DNS + proxy)
-```
-
----
-
-## 📝 Copy Principal
-
-### Headline
-> **Find remote jobs that won't blow up your phone**
-
-### Subheadline
-> The only job board that tells you if you'll need to make calls. Perfect for introverts, anxious souls, and anyone who prefers Slack over phone calls.
-
-### CTA
-> **Start browsing for free** → Get unlimited access for $9.99/mo
-
-### Social Proof (futuro)
-> "Finally, a job board that gets me" - @user
-> "Applied to 3 jobs, got 2 interviews. None required phone screens!" - @user2
-
----
-
-## ✅ Próximo Paso Inmediato
-
-**AHORA:** Verificar y comprar dominio
-
-Opciones a verificar:
-1. chilljobs.com
-2. chilljobs.co
-3. chilljobs.io
-4. getchilljobs.com
-5. trychilljobs.com
-
-¿Quieres que empiece con el rebrand del frontend mientras compras el dominio?
-
----
-
-*Creado: 2026-02-13*
+*Sprint definido: 2026-02-14*
+*Deadline: 2026-02-21*

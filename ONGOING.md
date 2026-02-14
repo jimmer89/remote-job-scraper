@@ -1,74 +1,120 @@
 # ChillJobs - Estado del Proyecto
 
-**Última actualización:** 2026-02-14 22:35
+**Ultima actualizacion:** 2026-02-14 (post-auditoria)
 
-## 🟢 Estado: LIVE
+## Estado: LIVE pero NO monetizable
 
-**URL Producción:** https://frontend-three-azure-48.vercel.app
+**Frontend:** https://frontend-three-azure-48.vercel.app
 **API:** https://remote-job-scraper-production-2b9c.up.railway.app
+**GitHub:** https://github.com/jimmer89/remote-job-scraper
 
-## ✅ Completado
+---
+
+## Completado
 
 ### Infraestructura
-- [x] Backend API en Railway
-- [x] Frontend en Vercel
-- [x] Base de datos SQLite con jobs
-- [x] Scraping automático cada 6h (cron en Railway)
+- [x] Backend API en Railway (FastAPI, SQLite)
+- [x] Frontend en Vercel (Next.js 16, Tailwind)
+- [x] Scraping automatico cada 6h (cron en Railway)
+- [x] 1,039 jobs de 5 fuentes (RemoteOK, WWR, Indeed, Glassdoor, Reddit)
+- [x] 254 jobs no-phone detectados (24.5%)
+- [x] 441 jobs con salario (42.4%)
 
 ### Frontend
-- [x] Rediseño completo con branding ChillJobs
-- [x] Landing page con hero, CTAs, categorías
-- [x] Sistema de búsqueda y filtros
-- [x] Quiz de matching
-- [x] Página de pricing
-- [x] Página de login/registro
-- [x] Modal de upgrade
-- [x] Cards bloqueadas para free users
-- [x] Navegación con historial (botón atrás)
+- [x] Landing page con hero, CTAs, categorias
+- [x] Sistema de busqueda y filtros
+- [x] Quiz interactivo de matching
+- [x] Pagina de pricing (Free vs Pro)
+- [x] Modal de upgrade para free users
+- [x] Cards bloqueadas/blurred para free tier
+- [x] Responsive (movil + desktop)
 
-### Autenticación
-- [x] NextAuth configurado
-- [x] Login con email/password
-- [x] Registro de usuarios
+### Auth
+- [x] NextAuth con email/password
 - [x] Sesiones JWT
+- [x] Logica freemium (isPro flag)
 
-### Modelo Freemium
-- [x] Free: 1 job visible
-- [x] Pro: Jobs ilimitados + filtros avanzados
-- [x] Filtros No-Phone y Salary bloqueados para free
-- [x] UI de upgrade
+### Stripe (solo estructura)
+- [x] Endpoint de checkout creado
+- [x] Webhook de suscripcion creado
+- [x] Pagina de success con confetti
 
-### Stripe (estructura)
-- [x] Endpoint de checkout
-- [x] Webhook de suscripción
-- [x] Página de éxito
+---
 
-## 🔴 Pendiente
+## ROTO / Bloqueante
 
-### Alta Prioridad
-- [ ] **Configurar Stripe** - Añadir API keys reales
-- [ ] **Dominio personalizado** - Jaume ya lo tiene
-- [ ] **Base de datos de usuarios** - Ahora es in-memory
+### Stripe — NO se puede cobrar
+- API keys NO configuradas en Vercel
+- Checkout devuelve error 500
+- **Resultado:** Revenue = $0 imposible de cambiar
 
-### Media Prioridad
-- [ ] Google OAuth - Credenciales de Google Cloud
-- [ ] Email alerts para nuevos jobs
-- [ ] Guardar favoritos
+### Auth — Usuarios se pierden
+- Usuarios almacenados en `Map()` (JavaScript in-memory)
+- Cada restart de Railway borra todos los registros
+- Passwords en TEXTO PLANO (bcryptjs instalado pero no usado)
+- **Resultado:** Uso real imposible
 
-### Baja Prioridad
-- [ ] Newsletter funcional
-- [ ] SEO mejorado
-- [ ] Dark mode
-- [ ] PWA / App móvil
+### Dominio — URL de desarrollo
+- URL actual es `frontend-three-azure-48.vercel.app`
+- **Resultado:** Zero credibilidad para cobrar
 
-## 📊 Métricas Actuales
+### NextAuth secret — Hardcoded
+- Secret por defecto en produccion
+- Session hijacking posible
 
-- **Total Jobs:** ~1,039
-- **No-Phone Jobs:** ~254
-- **Con Salary:** ~441
-- **Sources:** 5 (RemoteOK, WWR, Reddit, Indeed, Glassdoor)
+### Google OAuth — Sin credenciales
+- Boton visible pero no funcional
 
-## 🔧 Para Desarrollar Localmente
+---
+
+## Metricas actuales
+
+| Metrica | Valor |
+|---------|-------|
+| Total Jobs | 1,039 |
+| No-Phone Jobs | 254 (24.5%) |
+| Con Salary | 441 (42.4%) |
+| Fuentes | 5 |
+| Usuarios registrados | 0 |
+| Pro subscribers | 0 |
+| Ingresos | $0 |
+
+### Distribucion por fuente
+| Fuente | Jobs |
+|--------|------|
+| Indeed (JobSpy) | 429 |
+| WeWorkRemotely | 336 |
+| RemoteOK | 112 |
+| Reddit | 112 |
+| Glassdoor (JobSpy) | 50 |
+
+### Distribucion por categoria
+| Categoria | Jobs |
+|-----------|------|
+| Other | 472 |
+| Dev | 195 |
+| Support | 181 |
+| Sales | 56 |
+| Marketing | 51 |
+| Design | 51 |
+| VA | 12 |
+| Writing | 11 |
+| Moderation | 5 |
+| HR | 4 |
+| Data Entry | 1 |
+
+---
+
+## Sprint de 1 semana (14-21 feb 2026)
+
+Ver [ACTION_PLAN.md](./ACTION_PLAN.md) para el sprint detallado dia por dia.
+
+**Objetivo:** Dejar el producto listo para cobrar y lanzar.
+**Decision post-sprint:** Si hay traccion, seguir. Si no, pausar.
+
+---
+
+## Desarrollo local
 
 ```bash
 # Backend
@@ -81,8 +127,18 @@ cd frontend
 npm run dev
 ```
 
-## 📝 Notas
+---
 
-- Los usuarios se guardan en memoria (Map en auth.ts) - se pierden al reiniciar
-- Para persistir usuarios, migrar a SQLite o Postgres
-- El botón "Continue with Google" está visible pero no funciona sin credenciales
+## Seguridad — Issues abiertos
+
+| Issue | Severidad | Fix estimado |
+|-------|-----------|-------------|
+| Passwords en texto plano | CRITICA | 30 min |
+| NextAuth secret hardcoded | ALTA | 5 min |
+| CORS abierto (*) | MEDIA | 5 min |
+| Sin rate limiting en API | BAJA | 2h |
+| Sin validacion de input en endpoints | BAJA | 1h |
+
+---
+
+*Actualizado: 2026-02-14 (post-auditoria)*

@@ -1,127 +1,106 @@
-# ChillJobs 🌴
+# ChillJobs
 
 **Remote Jobs. No Calls Required.**
 
-A job board for people who want remote work without the phone calls. The only job board with a no-phone filter.
+Job board para trabajos remotos sin llamadas telefonicas. El unico job board con filtro no-phone.
 
-🌐 **Live:** https://frontend-three-azure-48.vercel.app
+## Estado (14 feb 2026)
+
+- 1,039 jobs de 5 fuentes, actualizados cada 6h
+- 254 jobs no-phone detectados (24.5%)
+- Frontend live en Vercel, API live en Railway
+- **0 usuarios, 0 ingresos** — Sprint de 1 semana para lanzar (ver ACTION_PLAN.md)
 
 ## Features
 
-### For Job Seekers
-- 📵 **No-Phone Filter** - Find jobs that don't require phone calls
-- 💰 **Salary Transparency** - See pay before you apply
-- 🎯 **Smart Quiz** - Match with your perfect job
-- 🔄 **Updated Every 6 Hours** - Fresh jobs from 5+ sources
+- No-Phone Filter — detecta jobs sin llamadas telefonicas
+- Salary Transparency — muestra salario antes de aplicar
+- Smart Quiz — matching interactivo con preferencias
+- Multi-Source — RemoteOK, WeWorkRemotely, Indeed, Glassdoor, Reddit
+- Freemium — 1 job gratis, Pro $9.99/mes para acceso completo
 
-### Tech Stack
-- **Frontend:** Next.js 16, React, Tailwind CSS
+## Tech Stack
+
+- **Frontend:** Next.js 16, React 19, Tailwind CSS 4
 - **Backend:** Python, FastAPI, SQLite
-- **Auth:** NextAuth.js
-- **Payments:** Stripe
-- **Hosting:** Vercel (frontend), Railway (API)
+- **Auth:** NextAuth.js (JWT)
+- **Payments:** Stripe (pendiente de configurar)
+- **Hosting:** Vercel (frontend) + Railway (API)
 
 ## Project Structure
 
 ```
 remote-job-scraper/
-├── src/                    # Backend Python code
+├── src/                    # Backend Python
 │   ├── api.py             # FastAPI REST API
-│   ├── database.py        # SQLite database
-│   ├── scrapers/          # Job scrapers
+│   ├── database.py        # SQLite operations
+│   ├── scrapers/          # Job scrapers (5 fuentes)
 │   └── main.py            # CLI interface
 ├── frontend/              # Next.js frontend
-│   ├── src/
-│   │   ├── app/           # Pages & API routes
-│   │   ├── components/    # React components
-│   │   ├── lib/           # Utilities & API client
-│   │   └── hooks/         # Custom hooks
-│   └── public/            # Static assets
-└── docs/                  # Documentation
+│   ├── src/app/           # Pages & API routes
+│   ├── src/components/    # React components
+│   └── src/lib/           # Auth, API client
+├── data/                  # SQLite database
+├── AUDIT_2026-02-14.md    # Auditoria del proyecto
+├── ACTION_PLAN.md         # Sprint de 1 semana
+├── MASTER_PLAN.md         # Resumen ejecutivo
+├── ONGOING.md             # Estado detallado
+├── BUSINESS_PLAN.md       # Modelo de negocio
+└── MARKETING_PLAN.md      # Estrategia de growth
 ```
 
-## Getting Started
-
-### Backend API
+## Development
 
 ```bash
-# Create virtual environment
-python -m venv venv
+# Backend
+cd ~/projects/remote-job-scraper
 source venv/bin/activate
+python -m uvicorn src.api:app --port 8000
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Run API server
-python -m uvicorn src.api:app --host 0.0.0.0 --port 8000
-```
-
-### Frontend
-
-```bash
+# Frontend
 cd frontend
-
-# Install dependencies
 npm install
-
-# Copy environment variables
 cp .env.example .env.local
-# Edit .env.local with your values
-
-# Run development server
 npm run dev
 ```
 
-## Environment Variables
+## Environment Variables (Frontend)
 
-### Frontend (.env.local)
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key
-
-# Optional: Google OAuth
+STRIPE_SECRET_KEY=sk_...
+STRIPE_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-
-# Optional: Stripe
-STRIPE_SECRET_KEY=
-STRIPE_PRICE_ID=
-STRIPE_WEBHOOK_SECRET=
 ```
-
-## Business Model
-
-- **Free Tier:** 1 job preview per search
-- **Pro Tier ($9.99/mo):**
-  - Unlimited job access
-  - No-Phone filter
-  - Salary filter
-  - Email alerts
-  - 24h early access
-
-## Data Sources
-
-Jobs are aggregated from:
-- RemoteOK
-- WeWorkRemotely
-- Reddit (r/remotejobs, r/forhire)
-- Indeed (via JobSpy)
-- Glassdoor (via JobSpy)
 
 ## API Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/jobs` | List jobs with filters |
+| `GET /api/jobs` | Search/filter jobs |
 | `GET /api/stats` | Job statistics |
-| `GET /api/categories` | Available categories |
-| `GET /api/lazy-girl-jobs` | Curated easy jobs |
+| `GET /api/categories` | Category counts |
+| `GET /api/lazy-girl-jobs` | Curated no-phone jobs |
+| `GET /api/jobs/{id}` | Single job details |
 
-## Contributing
+## Data Sources
 
-Built with 🦜 by PepLlu & Jaume
+| Source | Jobs | Method |
+|--------|------|--------|
+| Indeed | 429 | JobSpy scraper |
+| WeWorkRemotely | 336 | HTML scraping |
+| RemoteOK | 112 | Public API |
+| Reddit | 112 | JSON API |
+| Glassdoor | 50 | JobSpy scraper |
 
 ## License
 
 MIT
+
+---
+
+Built by Jaume & PepLlu
