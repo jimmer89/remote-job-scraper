@@ -19,20 +19,34 @@ Encuentra trabajos remotos "lazy girl jobs" - posiciones entry-level, sin teléf
 - 🎯 **Quiz interactivo**: Encuentra tu trabajo ideal
 - ⚡ **API REST**: FastAPI con documentación Swagger
 
-## 📊 Stats Actuales
+## 📊 Stats Actuales (2026-02-14)
 
 ```
-Total Jobs: 669
-No-Phone Jobs: 116
-Jobs with Salary: 201
+📦 Total activos: 1,039 jobs
+🚫 Sin teléfono: 254
+💰 Con salario: 441
+👨‍💻 Dev jobs: 195
 
 By Source:
-- WeWorkRemotely: 326
-- Indeed: 123
+- WeWorkRemotely: 329
+- Indeed (JobSpy): 146
 - RemoteOK: 98
-- Reddit: 89
-- Glassdoor: 33
+- Reddit: 88
 ```
+
+### Último scrape
+
+| Fuente | Encontrados | Nuevos |
+|--------|-------------|--------|
+| RemoteOK | 98 | 5 |
+| WeWorkRemotely | 329 | 1 |
+| Reddit | 88 | 4 |
+| JobSpy (Indeed) | 146 | 64 |
+| **Total** | **661** | **74** |
+
+⚠️ **Errores conocidos:**
+- ZipRecruiter: GDPR blocked (EU)
+- Glassdoor: Rate limit 429
 
 ## 🛠️ Tech Stack
 
@@ -126,11 +140,70 @@ remote-job-scraper/
 
 ## 🔄 Cron Jobs
 
-El scraper corre automáticamente cada 6 horas via cron local:
+Actualmente el scraper corre cada 6 horas via **cron local** (Clawdbot gateway).
 
 ```bash
-0 */6 * * * /path/to/scripts/cron_scrape.sh
+0 */6 * * * python src/main.py scrape
 ```
+
+---
+
+## 📋 TODO - Escalabilidad
+
+### 🎯 Problema actual
+El cron depende del PC local de Jaume. Si está apagado, no se ejecuta el scraper y los datos se quedan desactualizados.
+
+### ✅ Solución propuesta: GitHub Actions
+
+Migrar el cron a GitHub Actions para que sea independiente:
+
+```yaml
+# .github/workflows/scrape.yml
+name: Scrape Jobs
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Cada 6h
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run scraper
+        run: python src/main.py scrape
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      - name: Upload DB to Railway
+        run: # Script para sincronizar DB con Railway
+```
+
+### 📝 Pasos para implementar
+
+1. [ ] Crear workflow `.github/workflows/scrape.yml`
+2. [ ] Configurar secrets en GitHub (Reddit API, DB URL)
+3. [ ] Modificar scraper para escribir directamente a Railway DB (PostgreSQL)
+4. [ ] Migrar de SQLite a PostgreSQL en Railway
+5. [ ] Desactivar cron local de Clawdbot
+6. [ ] Testear ejecución automática
+
+### 💡 Alternativas consideradas
+
+| Opción | Pros | Contras |
+|--------|------|---------|
+| **GitHub Actions** ⭐ | Gratis, ya tiene repo, logs visibles | Necesita sync con DB |
+| Railway Cron | Todo en un sitio | Puede costar $ |
+| cron-job.org + endpoint | Simple | Timeout en scrapers largos |
+
+---
 
 ## 📝 License
 
