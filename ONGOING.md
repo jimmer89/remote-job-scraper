@@ -2,7 +2,7 @@
 
 **Ultima actualizacion:** 2026-02-15
 
-## Estado: LIVE — Stripe checkout FUNCIONANDO
+## Estado: LIVE — Todo funcionando
 
 **Frontend:** https://frontend-three-azure-48.vercel.app
 **API:** https://remote-job-scraper-production-2b9c.up.railway.app
@@ -15,8 +15,10 @@
 ### Infraestructura
 - [x] Backend API en Railway (FastAPI, SQLite)
 - [x] Frontend en Vercel (Next.js 16, Tailwind)
-- [x] Scraping automatico cada 6h (cron en Railway)
-- [x] 1,039 jobs de 5 fuentes (RemoteOK, WWR, Indeed, Glassdoor, Reddit)
+- [x] Volumen persistente en Railway (`/app/data`) — datos no se pierden entre deploys
+- [x] Scraping automatico cada 6h via cron-job.org → `GET /api/scrape?token=...`
+- [x] Endpoint `/api/scrape/status` para verificar ultimos scrapes
+- [x] 921 jobs de 5 fuentes (RemoteOK, WWR, Indeed, Glassdoor, Reddit)
 
 ### Auth — FUNCIONANDO
 - [x] Usuarios persistentes en SQLite (Railway backend)
@@ -31,7 +33,7 @@
 - [x] API keys configuradas en Vercel (STRIPE_SECRET_KEY, STRIPE_PRICE_ID)
 - [x] Webhook creado en Stripe Dashboard (STRIPE_WEBHOOK_SECRET configurado en Vercel)
 - [x] Checkout session funciona (redirige a Stripe, pago test exitoso)
-- [x] Env vars con .trim() para evitar whitespace issues
+- [x] Webhook → backend upgrade verificado (isPro: false → true)
 
 ### Frontend
 - [x] Landing page, quiz, pricing, auth pages
@@ -41,32 +43,39 @@
 
 ### Arquitectura final
 ```
+cron-job.org (cada 6h) → GET /api/scrape?token=...
+                                    ↓
 Browser → Vercel (Next.js frontend + NextAuth + Stripe checkout)
                 ↓ HTTP
-         Railway (FastAPI backend + SQLite)
+         Railway (FastAPI backend + SQLite + volumen persistente)
                 → jobs table (scrapers)
                 → users table (auth + pro status)
+                → scrape_log table (historial de scrapes)
 ```
 
 ---
 
-## Bugs resueltos durante el debug de Stripe
+## Variables de entorno
 
-| Bug | Causa | Fix |
-|-----|-------|-----|
-| Checkout 500 generico | Vercel auto-deploy no funcionaba | Deploy manual con `vercel --prod` |
-| StripeConnectionError | STRIPE_PRICE_ID tenia trailing newline | `.trim()` en todas las env vars |
-| "You must be logged in" | getServerSession incompatible con Next.js 16 (cookies() async) | Email desde client session en POST body |
-| "Not a valid URL" | `headers()` devuelve vacios en Vercel serverless | `new URL(request.url).origin` |
-| payment_method_types conflict | Stripe auto-payment-methods habilitado por defecto | Eliminado `payment_method_types` del checkout |
+### Vercel (Frontend)
+- `NEXT_PUBLIC_API_URL` — URL del backend Railway
+- `NEXTAUTH_SECRET` — secret para JWT sessions
+- `STRIPE_SECRET_KEY` — Stripe test/live key
+- `STRIPE_PRICE_ID` — precio de ChillJobs Pro
+- `STRIPE_WEBHOOK_SECRET` — secret del webhook de Stripe
+
+### Railway (Backend)
+- `SCRAPE_TOKEN` — token secreto para el endpoint de scraping
+
+### cron-job.org
+- URL: `https://remote-job-scraper-production-2b9c.up.railway.app/api/scrape?token=TU_TOKEN`
+- Schedule: `0 */6 * * *` (cada 6 horas)
 
 ---
 
 ## PENDIENTE
 
 ### Funcionalidad
-- [ ] Verificar que webhook Stripe→backend upgradea el usuario a Pro correctamente
-- [ ] Probar flujo completo: register → login → pay → user becomes Pro → unlock all jobs
 - [ ] Google OAuth setup
 - [ ] Email alerts para Pro users
 - [ ] Custom domain
@@ -74,6 +83,7 @@ Browser → Vercel (Next.js frontend + NextAuth + Stripe checkout)
 ### Seguridad
 - [ ] CORS abierto (*) — aceptable por ahora
 - [ ] Sin rate limiting en API
+- [ ] Eliminar `/api/users/status` debug endpoint antes de produccion
 
 ---
 
@@ -81,12 +91,12 @@ Browser → Vercel (Next.js frontend + NextAuth + Stripe checkout)
 
 | Metrica | Valor |
 |---------|-------|
-| Total Jobs | 1,039 |
-| No-Phone Jobs | 254 (24.5%) |
-| Con Salary | 441 (42.4%) |
+| Total Jobs | 921 |
+| No-Phone Jobs | 192 (20.8%) |
+| Con Salary | 321 (34.8%) |
 | Fuentes | 5 |
-| Usuarios registrados | 1+ (test) |
-| Pro subscribers | 0 (test payment) |
+| Usuarios registrados | 1 (test) |
+| Pro subscribers | 0 |
 | Ingresos | $0 |
 
 ---
@@ -114,6 +124,12 @@ cd ~/projects/remote-job-scraper/frontend
 # Backend: deploy manual via Railway CLI
 cd ~/projects/remote-job-scraper
 /home/jaume/.npm-global/bin/railway up --detach
+
+# Scrape manual
+curl "https://remote-job-scraper-production-2b9c.up.railway.app/api/scrape?token=TU_TOKEN"
+
+# Ver resultados del ultimo scrape
+curl "https://remote-job-scraper-production-2b9c.up.railway.app/api/scrape/status"
 ```
 
 ---
