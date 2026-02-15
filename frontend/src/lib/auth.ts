@@ -3,6 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://remote-job-scraper-production-2b9c.up.railway.app';
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN || process.env.SCRAPE_TOKEN || '';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -90,21 +91,27 @@ export async function registerUser(email: string, password: string, name: string
   return res.json();
 }
 
-// Upgrade user to Pro via backend API
+// Upgrade user to Pro via backend API (server-to-server, requires internal token)
 export async function upgradeUserToPro(email: string, stripeCustomerId?: string) {
   const res = await fetch(`${API_URL}/api/users/upgrade`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${INTERNAL_TOKEN}`,
+    },
     body: JSON.stringify({ email, stripe_customer_id: stripeCustomerId }),
   });
   return res.json();
 }
 
-// Downgrade user via backend API
+// Downgrade user via backend API (server-to-server, requires internal token)
 export async function downgradeUser(stripeCustomerId: string) {
   const res = await fetch(`${API_URL}/api/users/downgrade`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${INTERNAL_TOKEN}`,
+    },
     body: JSON.stringify({ stripe_customer_id: stripeCustomerId }),
   });
   return res.json();

@@ -5,7 +5,7 @@ REST API for Remote Job Scraper.
 Run with: uvicorn src.api:app --reload --port 8000
 """
 
-from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi import FastAPI, Query, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -13,7 +13,11 @@ from contextlib import contextmanager
 import json
 import uuid
 import bcrypt
+import os
+import asyncio
+import shutil
 from pathlib import Path
+from fastapi.responses import JSONResponse
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,20 +30,24 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS for frontend access
+# CORS — restrict to known frontend origins
+ALLOWED_ORIGINS = [
+    "https://frontend-three-azure-48.vercel.app",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-import shutil
+# --- Database setup ---
 
-# Use seed database if main db doesn't exist
 DB_PATH = "data/jobs.db"
-SEED_DB = "seeds/jobs_seed.db"  # Outside data/ so Railway volume mount doesn't overlay it
+SEED_DB = "seeds/jobs_seed.db"
 
 # Copy seed if jobs.db doesn't exist or has no job data (< 100KB means just schemas)
 if not Path(DB_PATH).exists() or Path(DB_PATH).stat().st_size < 100_000:
@@ -57,6 +65,25 @@ def get_db():
     finally:
         db.close()
 
+
+# --- Internal auth token (for server-to-server calls) ---
+
+INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN", os.environ.get("SCRAPE_TOKEN", ""))
+SCRAPE_TOKEN = os.environ.get("SCRAPE_TOKEN", "change-me-in-production")
+
+
+def verify_internal_token(authorization: str = Header(None)):
+    """Verify internal token from Authorization header or fail."""
+    if not INTERNAL_TOKEN:
+        raise HTTPException(status_code=500, detail="INTERNAL_TOKEN not configured")
+    token = ""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    if token != INTERNAL_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+# --- Public Endpoints (job data) ---
 
 @app.get("/")
 def root():
@@ -79,12 +106,7 @@ def get_jobs(
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     db: JobDatabase = Depends(get_db),
 ):
-    """
-    Get job listings with optional filters.
-    
-    Categories: support, dev, design, marketing, sales, writing, va, data-entry, hr, moderation, other
-    Sources: remoteok, weworkremotely, indeed, reddit
-    """
+    """Get job listings with optional filters."""
     if search:
         jobs = db.search_jobs(search, limit=limit)
     else:
@@ -96,15 +118,14 @@ def get_jobs(
             limit=limit,
             offset=offset,
         )
-    
-    # Parse tags JSON
+
     for job in jobs:
         if job.get('tags') and isinstance(job['tags'], str):
             try:
                 job['tags'] = json.loads(job['tags'])
             except:
                 job['tags'] = []
-    
+
     return {
         "count": len(jobs),
         "offset": offset,
@@ -116,7 +137,7 @@ def get_jobs(
 def get_job(job_id: str, db: JobDatabase = Depends(get_db)):
     """Get a single job by ID."""
     jobs = db.get_jobs(limit=1000)
-    
+
     for job in jobs:
         if job['id'] == job_id:
             if job.get('tags') and isinstance(job['tags'], str):
@@ -125,7 +146,7 @@ def get_job(job_id: str, db: JobDatabase = Depends(get_db)):
                 except:
                     job['tags'] = []
             return job
-    
+
     raise HTTPException(status_code=404, detail="Job not found")
 
 
@@ -176,17 +197,12 @@ def get_lazy_girl_jobs(
     limit: int = Query(50, ge=1, le=200),
     db: JobDatabase = Depends(get_db),
 ):
-    """
-    Get 'Lazy Girl Jobs' - remote jobs that don't require phone calls.
-    
-    Focuses on: customer support, data entry, content moderation, VA roles.
-    """
-    # Get no-phone jobs in specific categories
+    """Get 'Lazy Girl Jobs' - remote jobs that don't require phone calls."""
     lazy_categories = ['support', 'data-entry', 'moderation', 'va', 'writing']
-    
+
     all_jobs = []
     seen_ids = set()
-    
+
     for category in lazy_categories:
         jobs = db.get_jobs(
             category=category,
@@ -197,32 +213,29 @@ def get_lazy_girl_jobs(
             if job['id'] not in seen_ids:
                 all_jobs.append(job)
                 seen_ids.add(job['id'])
-    
-    # Also get no-phone jobs from other categories
+
     other_jobs = db.get_jobs(no_phone_only=True, limit=limit)
     for job in other_jobs:
         if job['id'] not in seen_ids:
             all_jobs.append(job)
             seen_ids.add(job['id'])
-    
-    # Sort by scraped_at descending
+
     all_jobs.sort(key=lambda x: x.get('scraped_at', ''), reverse=True)
-    
-    # Parse tags
+
     for job in all_jobs[:limit]:
         if job.get('tags') and isinstance(job['tags'], str):
             try:
                 job['tags'] = json.loads(job['tags'])
             except:
                 job['tags'] = []
-    
+
     return {
         "count": len(all_jobs[:limit]),
         "jobs": all_jobs[:limit],
     }
 
 
-# --- User Management Endpoints ---
+# --- User Endpoints (public: register, verify) ---
 
 class RegisterRequest(BaseModel):
     email: str
@@ -282,9 +295,12 @@ def verify_user(req: VerifyRequest, db: JobDatabase = Depends(get_db)):
     }
 
 
+# --- Protected Endpoints (server-to-server only, require INTERNAL_TOKEN) ---
+
 @app.post("/api/users/upgrade")
-def upgrade_user(req: UpgradeRequest, db: JobDatabase = Depends(get_db)):
-    """Upgrade a user to Pro."""
+def upgrade_user(req: UpgradeRequest, authorization: str = Header(None), db: JobDatabase = Depends(get_db)):
+    """Upgrade a user to Pro. Requires internal token."""
+    verify_internal_token(authorization)
     cursor = db.conn.cursor()
     cursor.execute(
         "UPDATE users SET is_pro = 1, stripe_customer_id = ?, pro_expires_at = datetime('now', '+30 days') WHERE email = ?",
@@ -295,8 +311,9 @@ def upgrade_user(req: UpgradeRequest, db: JobDatabase = Depends(get_db)):
 
 
 @app.post("/api/users/downgrade")
-def downgrade_user(req: DowngradeRequest, db: JobDatabase = Depends(get_db)):
-    """Downgrade a user (subscription cancelled)."""
+def downgrade_user(req: DowngradeRequest, authorization: str = Header(None), db: JobDatabase = Depends(get_db)):
+    """Downgrade a user. Requires internal token."""
+    verify_internal_token(authorization)
     cursor = db.conn.cursor()
     cursor.execute(
         "UPDATE users SET is_pro = 0, pro_expires_at = NULL WHERE stripe_customer_id = ?",
@@ -306,22 +323,7 @@ def downgrade_user(req: DowngradeRequest, db: JobDatabase = Depends(get_db)):
     return {"success": True}
 
 
-@app.get("/api/users/status")
-def get_users_status(db: JobDatabase = Depends(get_db)):
-    """Get all users status (admin debug - remove in production)."""
-    cursor = db.conn.cursor()
-    cursor.execute("SELECT id, email, name, is_pro, stripe_customer_id, pro_expires_at, created_at FROM users")
-    rows = cursor.fetchall()
-    return {"users": [dict(row) for row in rows]}
-
-
 # --- Scraper Endpoint ---
-
-import asyncio
-import os
-from fastapi.responses import JSONResponse
-
-SCRAPE_TOKEN = os.environ.get("SCRAPE_TOKEN", "change-me-in-production")
 
 async def _run_scrape(sources_to_scrape: list[str]):
     """Run scraping in background."""
@@ -380,7 +382,6 @@ async def trigger_scrape(
 
     sources_to_scrape = [source] if source else available
 
-    # Fire and forget — run scraping in background
     asyncio.create_task(_run_scrape(sources_to_scrape))
 
     return JSONResponse(
