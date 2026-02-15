@@ -39,10 +39,11 @@ import shutil
 
 # Use seed database if main db doesn't exist
 DB_PATH = "data/jobs.db"
-SEED_DB = "data/jobs_seed.db"
+SEED_DB = "seeds/jobs_seed.db"  # Outside data/ so Railway volume mount doesn't overlay it
 
 # Copy seed if jobs.db doesn't exist or is empty
 if not Path(DB_PATH).exists() or Path(DB_PATH).stat().st_size < 1000:
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     if Path(SEED_DB).exists():
         shutil.copy(SEED_DB, DB_PATH)
         print(f"Copied seed database to {DB_PATH}")
@@ -303,6 +304,15 @@ def downgrade_user(req: DowngradeRequest, db: JobDatabase = Depends(get_db)):
     )
     db.conn.commit()
     return {"success": True}
+
+
+@app.get("/api/users/status")
+def get_users_status(db: JobDatabase = Depends(get_db)):
+    """Get all users status (admin debug - remove in production)."""
+    cursor = db.conn.cursor()
+    cursor.execute("SELECT id, email, name, is_pro, stripe_customer_id, pro_expires_at, created_at FROM users")
+    rows = cursor.fetchall()
+    return {"users": [dict(row) for row in rows]}
 
 
 if __name__ == "__main__":
