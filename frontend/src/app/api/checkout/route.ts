@@ -5,7 +5,10 @@ import Stripe from 'stripe';
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
+    const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
+    const priceId = process.env.STRIPE_PRICE_ID?.trim();
+
+    if (!stripeKey || !priceId) {
       return NextResponse.json(
         { error: 'Stripe is not configured. Missing STRIPE_SECRET_KEY or STRIPE_PRICE_ID.' },
         { status: 500 }
@@ -15,7 +18,7 @@ export async function POST(request: Request) {
     // Use getToken instead of getServerSession for Next.js 16 compatibility
     const token = await getToken({
       req: request as any,
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: process.env.NEXTAUTH_SECRET?.trim(),
     });
 
     if (!token?.email) {
@@ -25,7 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripe = new Stripe(stripeKey);
 
     // Determine base URL from request headers
     const headersList = await headers();
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
       mode: 'subscription',
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID,
+          price: priceId,
           quantity: 1,
         },
       ],

@@ -4,15 +4,17 @@ import { upgradeUserToPro, downgradeUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+
+    if (!stripeKey || !webhookSecret) {
       return NextResponse.json(
         { error: 'Stripe webhook is not configured' },
         { status: 500 }
       );
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripe = new Stripe(stripeKey);
 
     const body = await request.text();
     const signature = request.headers.get('stripe-signature') || '';
