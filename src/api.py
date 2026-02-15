@@ -319,18 +319,12 @@ def get_users_status(db: JobDatabase = Depends(get_db)):
 
 import asyncio
 import os
+from fastapi.responses import JSONResponse
 
 SCRAPE_TOKEN = os.environ.get("SCRAPE_TOKEN", "change-me-in-production")
 
-@app.post("/api/scrape")
-async def trigger_scrape(
-    token: str = Query(..., description="Secret token to authorize scraping"),
-    source: Optional[str] = Query(None, description="Specific source to scrape"),
-):
-    """Trigger a scrape run. Protected by secret token."""
-    if token != SCRAPE_TOKEN:
-        raise HTTPException(status_code=403, detail="Invalid token")
-
+async def _run_scrape(sources_to_scrape: list[str]):
+    """Run scraping in background."""
     from src.scrapers import RemoteOKScraper, WeWorkRemotelyScraper, RedditScraper, JobSpyScraper, WellfoundScraper
 
     SCRAPERS = {
@@ -341,13 +335,7 @@ async def trigger_scrape(
         'wellfound': WellfoundScraper,
     }
 
-    if source and source not in SCRAPERS:
-        raise HTTPException(status_code=400, detail=f"Unknown source: {source}. Available: {list(SCRAPERS.keys())}")
-
-    sources_to_scrape = [source] if source else list(SCRAPERS.keys())
-
     db = JobDatabase(DB_PATH)
-    results = []
 
     for source_name in sources_to_scrape:
         scraper = SCRAPERS[source_name]()
@@ -366,14 +354,53 @@ async def trigger_scrape(
                     updated_count += 1
 
             db.finish_scrape(log_id, jobs_found=len(jobs), jobs_new=new_count, jobs_updated=updated_count)
-            results.append({"source": source_name, "found": len(jobs), "new": new_count, "updated": updated_count})
+            print(f"[scrape] {source_name}: found={len(jobs)}, new={new_count}, updated={updated_count}")
 
         except Exception as e:
             db.finish_scrape(log_id, 0, 0, 0, status='error', error=str(e))
-            results.append({"source": source_name, "error": str(e)})
+            print(f"[scrape] {source_name}: error={e}")
 
     db.close()
-    return {"status": "completed", "results": results}
+    print("[scrape] All sources completed")
+
+
+@app.post("/api/scrape")
+async def trigger_scrape(
+    token: str = Query(..., description="Secret token to authorize scraping"),
+    source: Optional[str] = Query(None, description="Specific source to scrape"),
+):
+    """Trigger a scrape run in background. Protected by secret token."""
+    if token != SCRAPE_TOKEN:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    available = ['remoteok', 'weworkremotely', 'reddit', 'jobspy', 'wellfound']
+
+    if source and source not in available:
+        raise HTTPException(status_code=400, detail=f"Unknown source: {source}. Available: {available}")
+
+    sources_to_scrape = [source] if source else available
+
+    # Fire and forget — run scraping in background
+    asyncio.create_task(_run_scrape(sources_to_scrape))
+
+    return JSONResponse(
+        status_code=202,
+        content={"status": "accepted", "message": f"Scraping started for: {sources_to_scrape}"}
+    )
+
+
+@app.get("/api/scrape/status")
+def get_scrape_status(db: JobDatabase = Depends(get_db)):
+    """Check last scrape results from the scrape_log table."""
+    cursor = db.conn.cursor()
+    cursor.execute("""
+        SELECT source, started_at, finished_at, jobs_found, jobs_new, jobs_updated, status, error
+        FROM scrape_log
+        ORDER BY started_at DESC
+        LIMIT 10
+    """)
+    rows = cursor.fetchall()
+    return {"recent_scrapes": [dict(row) for row in rows]}
 
 
 if __name__ == "__main__":
