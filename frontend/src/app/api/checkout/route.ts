@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getToken } from 'next-auth/jwt';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { authOptions } from '@/lib/auth';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
       return NextResponse.json(
@@ -13,17 +12,22 @@ export async function POST() {
       );
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    const session = await getServerSession(authOptions);
+    // Use getToken instead of getServerSession for Next.js 16 compatibility
+    const token = await getToken({
+      req: request as any,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-    if (!session?.user?.email) {
+    if (!token?.email) {
       return NextResponse.json(
         { error: 'You must be logged in' },
         { status: 401 }
       );
     }
 
-    // Determine base URL from NEXTAUTH_URL or request headers
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+    // Determine base URL from request headers
     const headersList = await headers();
     const host = headersList.get('host') || '';
     const proto = headersList.get('x-forwarded-proto') || 'https';
@@ -39,10 +43,10 @@ export async function POST() {
       ],
       success_url: `${baseUrl}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
-      customer_email: session.user.email,
+      customer_email: token.email,
       metadata: {
-        userId: (session.user as any).id || '',
-        email: session.user.email,
+        userId: (token.userId as string) || '',
+        email: token.email,
       },
     });
 
