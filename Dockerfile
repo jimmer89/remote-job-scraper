@@ -34,6 +34,7 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY src/ ./src/
 COPY data/ ./data/
+COPY seeds/ ./seeds/
 
 # Create data directory if not exists
 RUN mkdir -p /app/data /app/logs
