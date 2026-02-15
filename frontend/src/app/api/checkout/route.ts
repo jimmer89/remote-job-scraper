@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import Stripe from 'stripe';
 
 export async function POST(request: Request) {
@@ -27,11 +26,9 @@ export async function POST(request: Request) {
 
     const stripe = new Stripe(stripeKey);
 
-    // Determine base URL from request headers
-    const headersList = await headers();
-    const host = headersList.get('host') || '';
-    const proto = headersList.get('x-forwarded-proto') || 'https';
-    const baseUrl = process.env.NEXTAUTH_URL || `${proto}://${host}`;
+    // Derive base URL from the request URL
+    const url = new URL(request.url);
+    const baseUrl = url.origin;
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
