@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 
@@ -10,18 +9,16 @@ export async function POST(request: Request) {
 
     if (!stripeKey || !priceId) {
       return NextResponse.json(
-        { error: 'Stripe is not configured. Missing STRIPE_SECRET_KEY or STRIPE_PRICE_ID.' },
+        { error: 'Stripe is not configured.' },
         { status: 500 }
       );
     }
 
-    // Use getToken instead of getServerSession for Next.js 16 compatibility
-    const token = await getToken({
-      req: request as any,
-      secret: process.env.NEXTAUTH_SECRET?.trim(),
-    });
+    // Get email from request body (sent by authenticated client)
+    const body = await request.json();
+    const email = body.email;
 
-    if (!token?.email) {
+    if (!email) {
       return NextResponse.json(
         { error: 'You must be logged in' },
         { status: 401 }
@@ -46,10 +43,9 @@ export async function POST(request: Request) {
       ],
       success_url: `${baseUrl}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
-      customer_email: token.email,
+      customer_email: email,
       metadata: {
-        userId: (token.userId as string) || '',
-        email: token.email,
+        email,
       },
     });
 
