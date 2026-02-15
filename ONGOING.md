@@ -2,7 +2,7 @@
 
 **Ultima actualizacion:** 2026-02-15
 
-## Estado: LIVE — Stripe checkout pendiente de debug
+## Estado: LIVE — Stripe checkout FUNCIONANDO
 
 **Frontend:** https://frontend-three-azure-48.vercel.app
 **API:** https://remote-job-scraper-production-2b9c.up.railway.app
@@ -10,7 +10,7 @@
 
 ---
 
-## Completado (sprint dia 1, 14-15 feb)
+## Completado (sprint dia 1-2, 14-15 feb)
 
 ### Infraestructura
 - [x] Backend API en Railway (FastAPI, SQLite)
@@ -18,27 +18,28 @@
 - [x] Scraping automatico cada 6h (cron en Railway)
 - [x] 1,039 jobs de 5 fuentes (RemoteOK, WWR, Indeed, Glassdoor, Reddit)
 
-### Auth — ARREGLADO
+### Auth — FUNCIONANDO
 - [x] Usuarios persistentes en SQLite (Railway backend)
 - [x] Passwords hasheados con bcrypt (12 rounds)
 - [x] NextAuth secret configurado (variable de entorno en Vercel)
 - [x] Endpoints backend: `/api/users/register`, `/api/users/verify`, `/api/users/upgrade`, `/api/users/downgrade`
-- [x] Frontend auth.ts llama al backend via HTTP (no more in-memory, no more better-sqlite3)
+- [x] Frontend auth.ts llama al backend via HTTP
 
-### Stripe — Keys configuradas
+### Stripe — FUNCIONANDO
 - [x] Cuenta Stripe creada
 - [x] Producto creado: ChillJobs Pro $9.99/mes (price_1T0rU6HVbIehUQTDdxOsdOp5)
 - [x] API keys configuradas en Vercel (STRIPE_SECRET_KEY, STRIPE_PRICE_ID)
 - [x] Webhook creado en Stripe Dashboard (STRIPE_WEBHOOK_SECRET configurado en Vercel)
-- [x] NEXTAUTH_SECRET configurado en Vercel
+- [x] Checkout session funciona (redirige a Stripe, pago test exitoso)
+- [x] Env vars con .trim() para evitar whitespace issues
 
 ### Frontend
 - [x] Landing page, quiz, pricing, auth pages
 - [x] Logica freemium (1 job gratis, resto blurred)
 - [x] Error handling en checkout (muestra errores al usuario)
-- [x] Checkout route usa headers para derivar base URL (no depende de NEXTAUTH_URL)
+- [x] Checkout envia email desde session del cliente
 
-### Arquitectura final (post-fix)
+### Arquitectura final
 ```
 Browser → Vercel (Next.js frontend + NextAuth + Stripe checkout)
                 ↓ HTTP
@@ -49,33 +50,30 @@ Browser → Vercel (Next.js frontend + NextAuth + Stripe checkout)
 
 ---
 
-## PENDIENTE: Stripe checkout devuelve 500
+## Bugs resueltos durante el debug de Stripe
 
-### Sintoma
-- Usuario se registra OK (backend confirm)
-- Login funciona OK (JWT session)
-- Click "Upgrade Now" → Loading... → 500 Internal Server Error
-- Error en `/api/checkout` endpoint
+| Bug | Causa | Fix |
+|-----|-------|-----|
+| Checkout 500 generico | Vercel auto-deploy no funcionaba | Deploy manual con `vercel --prod` |
+| StripeConnectionError | STRIPE_PRICE_ID tenia trailing newline | `.trim()` en todas las env vars |
+| "You must be logged in" | getServerSession incompatible con Next.js 16 (cookies() async) | Email desde client session en POST body |
+| "Not a valid URL" | `headers()` devuelve vacios en Vercel serverless | `new URL(request.url).origin` |
+| payment_method_types conflict | Stripe auto-payment-methods habilitado por defecto | Eliminado `payment_method_types` del checkout |
 
-### Que se ha descartado
-- Stripe keys: configuradas en Vercel (STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET)
-- NEXTAUTH_SECRET: configurado en Vercel
-- Backend endpoints: funcionando (verificado con curl)
-- better-sqlite3: eliminado del frontend (era incompatible con Vercel serverless)
-- Base URL: checkout route ahora deriva la URL de los headers del request
+---
 
-### Posibles causas a investigar
-1. **Session JWT no valida** — la sesion se creo antes de cambiar NEXTAUTH_SECRET, puede que el JWT antiguo no se verifique con el nuevo secret. Probar: borrar cookies del navegador completamente, registrarse de nuevo.
-2. **Vercel no ha redesplegado** — verificar que el ultimo commit (9d305d0) esta desplegado en Vercel. Ir a Vercel Dashboard → Deployments y confirmar.
-3. **Error en Stripe API** — puede que las test keys no esten habilitadas o el price_id no sea valido. Probar: hacer un curl directo al endpoint con las keys.
-4. **CORS issue** — el frontend en Vercel llama al backend en Railway, puede que CORS bloquee. Verificar en Network tab si hay errores CORS.
+## PENDIENTE
 
-### Como debuggear
-1. Borrar TODAS las cookies del navegador para la URL de Vercel
-2. Registrarse de nuevo
-3. En Network tab (no Console), hacer click en la peticion `checkout` fallida
-4. Ver Response body — contendra el mensaje de error especifico
-5. Alternativamente, ir a Vercel Dashboard → Logs → buscar errores del endpoint checkout
+### Funcionalidad
+- [ ] Verificar que webhook Stripe→backend upgradea el usuario a Pro correctamente
+- [ ] Probar flujo completo: register → login → pay → user becomes Pro → unlock all jobs
+- [ ] Google OAuth setup
+- [ ] Email alerts para Pro users
+- [ ] Custom domain
+
+### Seguridad
+- [ ] CORS abierto (*) — aceptable por ahora
+- [ ] Sin rate limiting en API
 
 ---
 
@@ -87,21 +85,9 @@ Browser → Vercel (Next.js frontend + NextAuth + Stripe checkout)
 | No-Phone Jobs | 254 (24.5%) |
 | Con Salary | 441 (42.4%) |
 | Fuentes | 5 |
-| Usuarios registrados | 0 |
-| Pro subscribers | 0 |
+| Usuarios registrados | 1+ (test) |
+| Pro subscribers | 0 (test payment) |
 | Ingresos | $0 |
-
----
-
-## Seguridad — Resuelto vs Pendiente
-
-| Issue | Estado |
-|-------|--------|
-| Passwords en texto plano | RESUELTO — bcrypt 12 rounds |
-| NextAuth secret hardcoded | RESUELTO — env var en Vercel |
-| Users in-memory | RESUELTO — SQLite en Railway |
-| CORS abierto (*) | Pendiente (aceptable por ahora) |
-| Sin rate limiting en API | Pendiente |
 
 ---
 
@@ -121,13 +107,13 @@ npm run dev
 ## Deploy
 
 ```bash
-# Frontend: auto-deploy via Vercel on git push
-# Backend: manual deploy via Railway CLI
+# Frontend: deploy manual (auto-deploy de Vercel no funciona con subdirectorio)
+cd ~/projects/remote-job-scraper/frontend
+/home/jaume/.npm-global/bin/vercel --prod
+
+# Backend: deploy manual via Railway CLI
 cd ~/projects/remote-job-scraper
 /home/jaume/.npm-global/bin/railway up --detach
-
-# O forzar redeploy:
-/home/jaume/.npm-global/bin/railway redeploy --yes
 ```
 
 ---
