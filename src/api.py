@@ -315,6 +315,67 @@ def get_users_status(db: JobDatabase = Depends(get_db)):
     return {"users": [dict(row) for row in rows]}
 
 
+# --- Scraper Endpoint ---
+
+import asyncio
+import os
+
+SCRAPE_TOKEN = os.environ.get("SCRAPE_TOKEN", "change-me-in-production")
+
+@app.post("/api/scrape")
+async def trigger_scrape(
+    token: str = Query(..., description="Secret token to authorize scraping"),
+    source: Optional[str] = Query(None, description="Specific source to scrape"),
+):
+    """Trigger a scrape run. Protected by secret token."""
+    if token != SCRAPE_TOKEN:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    from src.scrapers import RemoteOKScraper, WeWorkRemotelyScraper, RedditScraper, JobSpyScraper, WellfoundScraper
+
+    SCRAPERS = {
+        'remoteok': RemoteOKScraper,
+        'weworkremotely': WeWorkRemotelyScraper,
+        'reddit': RedditScraper,
+        'jobspy': JobSpyScraper,
+        'wellfound': WellfoundScraper,
+    }
+
+    if source and source not in SCRAPERS:
+        raise HTTPException(status_code=400, detail=f"Unknown source: {source}. Available: {list(SCRAPERS.keys())}")
+
+    sources_to_scrape = [source] if source else list(SCRAPERS.keys())
+
+    db = JobDatabase(DB_PATH)
+    results = []
+
+    for source_name in sources_to_scrape:
+        scraper = SCRAPERS[source_name]()
+        log_id = db.log_scrape(source_name)
+
+        try:
+            jobs = await scraper.scrape()
+            new_count = 0
+            updated_count = 0
+
+            for job in jobs:
+                is_new, is_updated = db.upsert_job(job.to_dict())
+                if is_new:
+                    new_count += 1
+                elif is_updated:
+                    updated_count += 1
+
+            db.finish_scrape(log_id, jobs_found=len(jobs), jobs_new=new_count, jobs_updated=updated_count)
+            results.append({"source": source_name, "found": len(jobs), "new": new_count, "updated": updated_count})
+
+        except Exception as e:
+            db.finish_scrape(log_id, 0, 0, 0, status='error', error=str(e))
+            results.append({"source": source_name, "error": str(e)})
+
+    db.close()
+    return {"status": "completed", "results": results}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
