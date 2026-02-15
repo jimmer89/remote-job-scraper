@@ -41,8 +41,8 @@ import shutil
 DB_PATH = "data/jobs.db"
 SEED_DB = "seeds/jobs_seed.db"  # Outside data/ so Railway volume mount doesn't overlay it
 
-# Copy seed if jobs.db doesn't exist or is empty
-if not Path(DB_PATH).exists() or Path(DB_PATH).stat().st_size < 1000:
+# Copy seed if jobs.db doesn't exist or has no job data (< 100KB means just schemas)
+if not Path(DB_PATH).exists() or Path(DB_PATH).stat().st_size < 100_000:
     Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     if Path(SEED_DB).exists():
         shutil.copy(SEED_DB, DB_PATH)
