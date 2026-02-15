@@ -8,7 +8,7 @@ export async function POST() {
   try {
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
       return NextResponse.json(
-        { error: 'Stripe is not configured' },
+        { error: 'Stripe is not configured. Missing STRIPE_SECRET_KEY or STRIPE_PRICE_ID.' },
         { status: 500 }
       );
     }
@@ -31,7 +31,6 @@ export async function POST() {
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      payment_method_types: ['card'],
       line_items: [
         {
           price: process.env.STRIPE_PRICE_ID,
@@ -42,7 +41,7 @@ export async function POST() {
       cancel_url: `${baseUrl}/pricing`,
       customer_email: session.user.email,
       metadata: {
-        userId: (session.user as any).id,
+        userId: (session.user as any).id || '',
         email: session.user.email,
       },
     });
@@ -50,8 +49,10 @@ export async function POST() {
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error: any) {
     console.error('Stripe checkout error:', error);
+    const message = error?.message || 'Failed to create checkout session';
+    const code = error?.code || error?.type || 'unknown';
     return NextResponse.json(
-      { error: error.message || 'Failed to create checkout session' },
+      { error: `${message} (${code})` },
       { status: 500 }
     );
   }
