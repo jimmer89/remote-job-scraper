@@ -364,7 +364,7 @@ async def _run_scrape(sources_to_scrape: list[str]):
     print("[scrape] All sources completed")
 
 
-@app.post("/api/scrape")
+@app.api_route("/api/scrape", methods=["GET", "POST"])
 async def trigger_scrape(
     token: str = Query(..., description="Secret token to authorize scraping"),
     source: Optional[str] = Query(None, description="Specific source to scrape"),
